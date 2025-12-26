@@ -14,6 +14,7 @@ import arg.adegtiarev.ciclismo.util.TrackingConstants
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +35,7 @@ class TrackingService : LifecycleService() {
     lateinit var repository: RideRepository
 
     // Используем SupervisorJob, чтобы ошибка в одном процессе не убила весь скоуп
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // Локальные переменные для накопления данных за текущую поездку
     private var totalDistanceMetres = 0.0
@@ -43,6 +44,9 @@ class TrackingService : LifecycleService() {
 
     private var durationInSeconds = MutableStateFlow(0L)
     private var isAutoPaused = false
+
+    private var timerJob: Job? = null
+    private var locationJob: Job? = null
 
     companion object {
         val isTracking = MutableStateFlow(false)
@@ -76,27 +80,31 @@ class TrackingService : LifecycleService() {
     }
 
     private fun startForegroundService() {
+        // 1. Устанавливаем статус
         isTracking.value = true
+        isAutoPaused = false // Сбрасываем автопаузу при ручном старте
 
-        // Запускаем сервис в режиме Foreground
-        // Для Android 14+ тип location обязателен (мы прописали его в манифесте)
+        // 2. Foreground уведомление
         startForeground(
-            TrackingConstants.NOTIFICATION_ID, notificationHelper.createNotification()
+            TrackingConstants.NOTIFICATION_ID,
+            notificationHelper.createNotification()
         )
 
-        // Здесь мы будем создавать уведомление (Notification)
-        // И запускать сбор координат
-        startLocationUpdates()
+        // 3. Запускаем сбор локации, если он еще не запущен
+        if (locationJob == null || locationJob?.isActive == false) {
+            startLocationUpdates()
+        }
+
+        // 4. Запускаем таймер (он сам отменит старый, если есть)
         startTimer()
     }
 
     private fun startLocationUpdates() {
-        locationClient.getLocationUpdates(2000L)
+        locationJob?.cancel() // На всякий случай
+        locationJob = locationClient.getLocationUpdates(2000L)
             .onEach { location ->
                 if (isTracking.value) {
-                    pathPoints.value += location
-
-                    // Используем скорость для UI
+                    // Твоя логика обработки координат...
                     val speed = location.speed * 3.6f
                     currentSpeedKmh.value = speed
 
@@ -105,15 +113,35 @@ class TrackingService : LifecycleService() {
                     if (!isAutoPaused) {
                         val newPoint = location.toTrackingPoint()
                         addPointAndCalculate(newPoint)
-
-                        // Обновляем дистанцию для UI
+                        pathPoints.value += location
                         TrackingService.totalDistanceMetres.value = this.totalDistanceMetres
                     } else {
-                        currentSpeedKmh.value = 0f // Если на паузе - скорость 0
+                        currentSpeedKmh.value = 0f
                     }
                 }
             }
             .launchIn(serviceScope)
+    }
+
+    private fun startTimer() {
+        timerJob?.cancel()
+        timerJob = serviceScope.launch {
+            // Убеждаемся, что цикл видит актуальное значение
+            while (isTracking.value) {
+                delay(1000L)
+                if (!isAutoPaused && isTracking.value) {
+                    // Прямое обновление статического поля
+                    TrackingService.durationInSeconds.value += 1
+                    // И локального для сохранения в БД
+                    durationInSeconds.value = TrackingService.durationInSeconds.value
+                }
+            }
+        }
+    }
+
+    private fun pauseService() {
+        isTracking.value = false
+        // Таймер сам остановится, так как while (isTracking.value) станет false
     }
 
     private fun addPointAndCalculate(newPoint: TrackingPoint) {
@@ -169,9 +197,6 @@ class TrackingService : LifecycleService() {
         durationInSeconds.value = 0L
     }
 
-    private fun pauseService() {
-        isTracking.value = false
-    }
 
     private fun stopService() {
         saveRideToDb() // Сначала сохраняем
@@ -180,15 +205,4 @@ class TrackingService : LifecycleService() {
         stopSelf()
     }
 
-    private fun startTimer() {
-        serviceScope.launch {
-            while (isTracking.value) {
-                if (!isAutoPaused) {
-                    delay(1000L)
-                    durationInSeconds.value += 1
-                    TrackingService.durationInSeconds.value = durationInSeconds.value;
-                }
-            }
-        }
-    }
 }
