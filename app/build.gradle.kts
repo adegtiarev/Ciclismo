@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.secrets)
 }
 
 android {
@@ -68,6 +69,9 @@ dependencies {
 
     // Для работы с разрешениями (опционально, но облегчит жизнь в Compose)
     implementation(libs.accompanist.permissions)
+
+    // Maps
+    implementation(libs.maps.compose)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

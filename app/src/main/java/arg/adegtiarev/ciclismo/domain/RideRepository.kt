@@ -1,5 +1,7 @@
 package arg.adegtiarev.ciclismo.domain
 
+import arg.adegtiarev.ciclismo.domain.model.Ride
+import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import kotlinx.coroutines.flow.Flow
 
 interface RideRepository {
@@ -11,4 +13,5 @@ interface RideRepository {
     suspend fun addTrackingPoints(points: List<TrackingPoint>)
     suspend fun getTrackingPointsForRide(rideId: Long): List<TrackingPoint>
     fun getTrackingPointsForRideFlow(rideId: Long): Flow<List<TrackingPoint>>
+    suspend fun saveFullRide(ride: Ride, points: List<TrackingPoint>)
 }

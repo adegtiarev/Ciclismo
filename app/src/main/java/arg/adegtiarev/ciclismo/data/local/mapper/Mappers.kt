@@ -2,8 +2,8 @@ package arg.adegtiarev.ciclismo.data.local.mapper
 
 import arg.adegtiarev.ciclismo.data.local.entities.RideEntity
 import arg.adegtiarev.ciclismo.data.local.entities.TrackingPointEntity
-import arg.adegtiarev.ciclismo.domain.Ride
-import arg.adegtiarev.ciclismo.domain.TrackingPoint
+import arg.adegtiarev.ciclismo.domain.model.Ride
+import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 
 fun Ride.toEntity(): RideEntity = RideEntity(
     id = this.id,

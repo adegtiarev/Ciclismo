@@ -1,4 +1,4 @@
-package arg.adegtiarev.ciclismo.domain
+package arg.adegtiarev.ciclismo.domain.model
 
 data class TrackingPoint(
     val id: Long = 0,

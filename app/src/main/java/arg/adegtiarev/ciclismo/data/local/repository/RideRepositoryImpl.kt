@@ -4,9 +4,9 @@ import arg.adegtiarev.ciclismo.data.local.dao.RideDao
 import arg.adegtiarev.ciclismo.data.local.dao.TrackingPointDao
 import arg.adegtiarev.ciclismo.data.local.mapper.toDomain
 import arg.adegtiarev.ciclismo.data.local.mapper.toEntity
-import arg.adegtiarev.ciclismo.domain.Ride
+import arg.adegtiarev.ciclismo.domain.model.Ride
 import arg.adegtiarev.ciclismo.domain.RideRepository
-import arg.adegtiarev.ciclismo.domain.TrackingPoint
+import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -52,5 +52,12 @@ class RideRepositoryImpl @Inject constructor(
         return trackingPointDao.getTrackingPointsForRideFlow(rideId).map { entities ->
             entities.map { it.toDomain() }
         }
+    }
+
+    override suspend fun saveFullRide(ride: Ride, points: List<TrackingPoint>) {
+        rideDao.saveFullRide(
+            ride.toEntity(),
+            points.map { it.toEntity() }
+        )
     }
 }

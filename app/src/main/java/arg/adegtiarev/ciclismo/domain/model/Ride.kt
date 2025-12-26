@@ -1,7 +1,7 @@
-package arg.adegtiarev.ciclismo.domain
+package arg.adegtiarev.ciclismo.domain.model
 
 data class Ride(
-    val id: Int,
+    val id: Long,
     val distance: Double,
     val duration: Long,
     val timestamp: Long,
