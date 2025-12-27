@@ -4,17 +4,11 @@
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
-    <!-- Для Android 10+ (API 29+) нужно для получения локации в фоне (если бы мы хотели это делать не через FG service, но для FG service тоже полезно иметь в виду, хотя с Android 14 ужесточили) -->
-    <!-- Однако, для Foreground Service с типом location достаточно FOREGROUND_SERVICE_LOCATION в Android 14+ -->
-    <!-- Если мы хотим действительно запускать сервис из фона или долго держать, может понадобиться, но пока оставим как есть, если функционал требует -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <application
         android:name=".App"
@@ -33,7 +27,6 @@
             android:theme="@style/Theme.Ciclismo">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -43,6 +36,9 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <receiver android:name=".data.service.GeofenceBroadcastReceiver" android:exported="false"/>
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />

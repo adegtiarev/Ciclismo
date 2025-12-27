@@ -9,28 +9,14 @@ Ciclismo provides a seamless and intelligent tracking experience with several ke
 - **Real-Time GPS Tracking**: Records your route with precision, drawing your path on the map as you move.
 - **Live Ride Statistics**: Displays essential stats during your ride, including current speed, distance traveled, and total duration.
 - **Intelligent Auto-Pause & Resume**: The app automatically pauses the timer and tracking when you stop moving and seamlessly resumes when you start again. No manual intervention is needed!
-- **Automatic Finish Detection**: Ciclismo cleverly detects when you've returned to your starting point and prompts you to save your ride, making it easy to end your session.
+- **Automatic Finish Detection**: Utilizes the **Geofencing API** to efficiently detect when you've returned to your starting point, prompting you to save your ride without draining the battery.
 - **Ride History & Details**: All completed rides are saved locally. You can browse your history and view detailed summaries of each ride, including the route map and performance statistics.
 
 ## App Showcase
 
-<p align="center">
-  <img src="images/1-home.png" width="250" alt="Home Screen">
-  <img src="images/2-before-start.png" width="250" alt="Ready to Start">
-  <img src="images/3-tracking-in-process.png" width="250" alt="Tracking a Ride">
-</p>
-<p align="center">
-  <img src="images/4-tracking-on-pause.png" width="250" alt="Auto-Paused">
-  <img src="images/5-save-dialog.png" width="250" alt="Save Dialog">
-  <img src="images/6-details.png" width="250" alt="Ride Details">
-</p>
-
-1.  **Home Screen**: View total statistics and a list of your past rides.
-2.  **Tracking Screen**: Get ready to start your journey.
-3.  **Ride in Progress**: See your path and live stats.
-4.  **Auto-Paused**: The app automatically pauses when you take a break.
-5.  **Finish & Save**: Ciclismo prompts you to save when you return to your starting point.
-6.  **Ride Details**: Review your completed route and detailed performance metrics.
+| <img src="images/1-home.png" width="250"><br><b>1. Home Screen</b>: View total statistics and a list of your past rides. | <img src="images/2-before-start.png" width="250"><br><b>2. Tracking Screen</b>: Get ready to start your journey. | <img src="images/3-tracking-in-process.png" width="250"><br><b>3. Ride in Progress</b>: See your path and live stats. |
+| :---: | :---: | :---: |
+| <img src="images/4-tracking-on-pause.png" width="250"><br><b>4. Auto-Paused</b>: The app automatically pauses when you take a break. | <img src="images/5-save-dialog.png" width="250"><br><b>5. Finish & Save</b>: Ciclismo prompts you to save when you return to your starting point. | <img src="images/6-details.png" width="250"><br><b>6. Ride Details</b>: Review your completed route and detailed performance metrics. |
 
 ## Technical Stack & Architecture
 
@@ -48,5 +34,6 @@ This project is a demonstration of modern Android development practices, showcas
   - **Hilt**: For dependency injection, making the codebase modular and testable.
   - **Room**: For local database storage, providing a persistent history of rides.
   - **Google Maps Compose Library**: For displaying interactive maps and drawing ride routes.
+  - **Geofencing API**: For battery-efficient detection of returning to the start location.
   - **Lifecycle-Aware Components**: The tracking logic is encapsulated in a **Foreground Service** that is also a `LifecycleService`, ensuring it is managed correctly by the Android system.
   - **Gradle Version Catalog (TOML)**: For centralized and type-safe dependency management.
