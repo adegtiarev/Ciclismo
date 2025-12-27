@@ -46,6 +46,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.CameraMoveStartedReason
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -100,7 +101,11 @@ fun TrackingScreen(
             val intent = Intent(context, TrackingService::class.java).apply {
                 this.action = action
             }
-            context.startForegroundService(intent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
         }
     }
 
@@ -173,29 +178,22 @@ fun CiclismoMap(points: List<TrackingPoint>) {
         points.map { LatLng(it.latitude, it.longitude) }
     }
 
-    // Авто-центрирование при добавлении новых точек
-    LaunchedEffect(path.size) {
+    // Авто-центрирование и следование за пользователем
+    LaunchedEffect(path.size, isFollowing) {
         if (isFollowing && path.isNotEmpty()) {
             cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngZoom(path.last(), 16f)
+                // Zoom 18f - более крупный масштаб для пеших/вело прогулок
+                CameraUpdateFactory.newLatLngZoom(path.last(), 18f)
             )
         }
     }
 
-    // Слушатель движения карты
-    // TODO: Исправить логику, так как animate вызывает isMoving = true и сбрасывает слежение
+    // Отключение слежения только при жесте пользователя (свайп карты)
     LaunchedEffect(cameraPositionState.isMoving) {
         if (cameraPositionState.isMoving) {
-            // Временное решение: пока оставим как есть, но это баг: любое движение, даже программное, отключает слежение.
-            // Нужно проверять cameraMoveStartedReason
-            if (!cameraPositionState.isMoving) {
-               // ничего
+            if (cameraPositionState.cameraMoveStartedReason == CameraMoveStartedReason.GESTURE) {
+                isFollowing = false
             }
-             // isFollowing = false // <-- Это отключает слежение сразу же. Пока закомментирую, чтобы проверить нотификации.
-             // На самом деле, лучше использовать SnapshotFlow и проверять причину, но пока оставим как есть в исходнике, 
-             // или лучше вообще убрать пока автоматический сброс, чтобы проверить основную функциональность.
-             // Верну как было у пользователя, чтобы не менять слишком много за раз, но я знаю об этой проблеме.
-             isFollowing = false
         }
     }
 
@@ -203,21 +201,20 @@ fun CiclismoMap(points: List<TrackingPoint>) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            // ВАЖНО: isMyLocationEnabled заставляет карту саму найти тебя
             properties = MapProperties(isMyLocationEnabled = true),
-            uiSettings = MapUiSettings(myLocationButtonEnabled = true)
+            uiSettings = MapUiSettings(myLocationButtonEnabled = true),
+            onMyLocationButtonClick = {
+                // Возвращаем слежение и зумим к последней точке
+                isFollowing = true
+                if (path.isNotEmpty()) {
+                    true // Consumed: мы сами управляем камерой (через LaunchedEffect выше)
+                } else {
+                    false // Default: если точек нет, пусть карта сама ищет позицию
+                }
+            }
         ) {
             if (path.isNotEmpty()) {
                 Polyline(points = path, color = Color.Blue, width = 12f)
-            }
-        }
-
-        if (!isFollowing) {
-            Button(
-                onClick = { isFollowing = true },
-                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).statusBarsPadding()
-            ) {
-                Text("Center")
             }
         }
     }
