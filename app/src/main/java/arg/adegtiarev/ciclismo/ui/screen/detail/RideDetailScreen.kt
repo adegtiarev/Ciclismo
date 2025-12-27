@@ -112,8 +112,10 @@ fun RideDetailScreen(
             if (ride != null) {
                 val currentRide = ride!!
                 
+                // Map
                 DetailMap(ride = currentRide)
 
+                // Statistics (at the bottom, on top of the map)
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -134,18 +136,22 @@ fun RideDetailScreen(
 fun DetailMap(ride: Ride) {
     val cameraPositionState = rememberCameraPositionState()
     
+    // Use remember for point transformation to avoid recalculation on every recomposition
     val routePoints = remember(ride) { 
         ride.routePoints.map { LatLng(it.latitude, it.longitude) } 
     }
     
+    // Map loaded flag. CameraUpdateFactory can only be used when the map is ready.
     var isMapLoaded by remember { mutableStateOf(false) }
 
+    // Center the map on the route ONLY when the map is loaded and there are points
     LaunchedEffect(routePoints, isMapLoaded) {
         if (routePoints.isNotEmpty() && isMapLoaded) {
             val boundsBuilder = LatLngBounds.builder()
             routePoints.forEach { boundsBuilder.include(it) }
             val bounds = boundsBuilder.build()
             
+            // 100px padding so the route doesn't stick to the edges
             try {
                 cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 100))
             } catch (e: Exception) {

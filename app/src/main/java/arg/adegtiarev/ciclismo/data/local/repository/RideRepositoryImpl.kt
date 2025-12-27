@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class RideRepositoryImpl @Inject constructor(
-    private val rideDao: RideDao,
+    private val rideDao: RideDao
 ) : RideRepository {
 
     override suspend fun getRideById(id: Long): Ride? {

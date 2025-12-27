@@ -14,12 +14,12 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RideDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertRide(ride: RideEntity): Long
+    suspend fun insertRide(ride: RideEntity): Long // Returns the ID of the created ride
 
     @Query("SELECT * FROM rides ORDER BY timestamp DESC")
     fun getAllRides(): Flow<List<RideEntity>>
 
-    // This is the efficient way to get a ride with its points
+    // Method to get a ride with all its points
     @Transaction
     @Query("SELECT * FROM rides WHERE id = :rideId")
     suspend fun getRideWithPoints(rideId: Long): RideWithPoints?
@@ -29,12 +29,13 @@ interface RideDao {
 
     @Transaction
     suspend fun saveFullRide(ride: RideEntity, points: List<TrackingPointEntity>): Long {
-        val rideId = insertRide(ride)
-        val pointsWithId = points.map { it.copy(rideId = rideId) }
+        val rideId = insertRide(ride) // Get the generated ID
+        val pointsWithId = points.map { it.copy(rideId = rideId) } // Link points to the ride ID
         insertTrackingPoints(pointsWithId)
         return rideId
     }
 
+    // Add this method here so saveFullRide can call it
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrackingPoints(points: List<TrackingPointEntity>)
 
