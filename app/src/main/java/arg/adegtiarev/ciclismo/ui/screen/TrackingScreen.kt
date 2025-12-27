@@ -39,6 +39,7 @@ import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import arg.adegtiarev.ciclismo.ui.state.RideState
 import arg.adegtiarev.ciclismo.ui.viewmodel.MainViewModel
 import arg.adegtiarev.ciclismo.util.TrackingConstants
+import arg.adegtiarev.ciclismo.util.TrackingConstants.HIDE_STOP_DIALOG
 import arg.adegtiarev.ciclismo.util.TrackingConstants.SHOW_STOP_DIALOG
 import arg.adegtiarev.ciclismo.util.formatDistance
 import arg.adegtiarev.ciclismo.util.formatDuration
@@ -64,10 +65,14 @@ fun TrackingScreen(
     val showDialog = viewModel.showExitDialog
     val serviceEvent by viewModel.serviceEvents.collectAsState()
 
-    // Следим за авто-стопом от сервиса
+    // Следим за событиями от сервиса
     LaunchedEffect(serviceEvent) {
-        if (serviceEvent == SHOW_STOP_DIALOG) {
-            viewModel.setDialogVisibility(true)
+        when (serviceEvent) {
+            SHOW_STOP_DIALOG -> viewModel.setDialogVisibility(true)
+            HIDE_STOP_DIALOG -> {
+                viewModel.setDialogVisibility(false)
+                viewModel.clearServiceEvent()
+            }
         }
     }
 
@@ -101,9 +106,6 @@ fun TrackingScreen(
             val intent = Intent(context, TrackingService::class.java).apply {
                 this.action = action
             }
-            // Используем startForegroundService только для старта, так как сервис обязан вызвать startForeground.
-            // Для остановки или паузы используем обычный startService, чтобы избежать краша
-            // ForegroundServiceDidNotStartInTimeException, если сервис быстро остановится.
             if (action == TrackingConstants.ACTION_START_OR_RESUME_SERVICE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
@@ -130,23 +132,21 @@ fun TrackingScreen(
     )
 
     if (permissionState.allPermissionsGranted) {
-        // Показываем карту и панель
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
-                // Тут будет панель со статистикой (скорость, время) и кнопками
                 TrackingBottomPanel(
                     state = state,
                     onStartClick = { viewModel.sendCommand(TrackingConstants.ACTION_START_OR_RESUME_SERVICE) },
                     onPauseClick = { viewModel.sendCommand(TrackingConstants.ACTION_PAUSE_SERVICE) },
+                    onResumeClick = { viewModel.sendCommand(TrackingConstants.ACTION_START_OR_RESUME_SERVICE) },
                     onStopClick = {
-                        viewModel.setDialogVisibility(true)
+                        viewModel.setDialogVisibility(true) // Ручной стоп тоже вызывает диалог
                     }
                 )
             }
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
-                // Место для нашей карты
                 CiclismoMap(points = state.points)
             }
         }
@@ -156,7 +156,7 @@ fun TrackingScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentAlignment = Alignment.Center // Центрируем содержимое
+                contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -185,13 +185,12 @@ fun CiclismoMap(points: List<TrackingPoint>) {
     LaunchedEffect(path.size, isFollowing) {
         if (isFollowing && path.isNotEmpty()) {
             cameraPositionState.animate(
-                // Zoom 18f - более крупный масштаб для пеших/вело прогулок
                 CameraUpdateFactory.newLatLngZoom(path.last(), 18f)
             )
         }
     }
 
-    // Отключение слежения только при жесте пользователя (свайп карты)
+    // Отключение слежения только при жесте пользователя
     LaunchedEffect(cameraPositionState.isMoving) {
         if (cameraPositionState.isMoving) {
             if (cameraPositionState.cameraMoveStartedReason == CameraMoveStartedReason.GESTURE) {
@@ -207,13 +206,8 @@ fun CiclismoMap(points: List<TrackingPoint>) {
             properties = MapProperties(isMyLocationEnabled = true),
             uiSettings = MapUiSettings(myLocationButtonEnabled = true),
             onMyLocationButtonClick = {
-                // Возвращаем слежение и зумим к последней точке
                 isFollowing = true
-                if (path.isNotEmpty()) {
-                    true // Consumed: мы сами управляем камерой (через LaunchedEffect выше)
-                } else {
-                    false // Default: если точек нет, пусть карта сама ищет позицию
-                }
+                path.isNotEmpty()
             }
         ) {
             if (path.isNotEmpty()) {
@@ -228,10 +222,11 @@ fun TrackingBottomPanel(
     state: RideState,
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
     onStopClick: () -> Unit
 ) {
     androidx.compose.material3.Surface(
-        tonalElevation = 8.dp, // Немного приподнимем панель над картой
+        tonalElevation = 8.dp,
         shadowElevation = 8.dp
     ) {
         Column(
@@ -254,20 +249,42 @@ fun TrackingBottomPanel(
 
             // Кнопки
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                if (!state.isTracking) {
+                // Если поездка ещё не начата (или сброшена в 0)
+                if (state.durationSeconds == 0L && !state.isTracking) {
                     Button(
                         onClick = onStartClick,
-                        modifier = Modifier.fillMaxWidth(0.8f) // Широкая кнопка Старт
+                        modifier = Modifier.fillMaxWidth(0.8f)
                     ) {
                         Text("START RIDE")
                     }
-                } else {
-                    Button(onClick = onPauseClick) { Text("PAUSE") }
+                } 
+                // Если поездка идет (активна)
+                else if (state.isTracking) {
+                    Button(
+                        onClick = onPauseClick,
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    ) {
+                        Text("PAUSE")
+                    }
+                } 
+                // Если поездка на паузе
+                else {
+                    Button(
+                        onClick = onResumeClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("RESUME")
+                    }
                     Spacer(Modifier.width(16.dp))
-                    FilledTonalButton(onClick = onStopClick) {
+                    FilledTonalButton(
+                        onClick = onStopClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text("STOP", color = Color.Red)
                     }
                 }
@@ -295,5 +312,5 @@ fun TrackingBottomPanelPreview() {
             currentSpeedKmh = 10f,
             isAutoPaused = false,
             points = emptyList()
-        ), onStartClick = {}, onPauseClick = {}, onStopClick = {})
+        ), onStartClick = {}, onPauseClick = {}, onResumeClick = {}, onStopClick = {})
 }

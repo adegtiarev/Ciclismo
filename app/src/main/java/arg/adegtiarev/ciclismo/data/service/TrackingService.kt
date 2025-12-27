@@ -14,6 +14,7 @@ import arg.adegtiarev.ciclismo.domain.calculator.RideStatsCalculator
 import arg.adegtiarev.ciclismo.domain.model.Ride
 import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import arg.adegtiarev.ciclismo.util.TrackingConstants
+import arg.adegtiarev.ciclismo.util.TrackingConstants.HIDE_STOP_DIALOG
 import arg.adegtiarev.ciclismo.util.TrackingConstants.SHOW_STOP_DIALOG
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -47,7 +48,6 @@ class TrackingService : LifecycleService() {
     private val allPoints = mutableListOf<TrackingPoint>() // Список для сохранения в БД
 
     private var durationInSeconds = MutableStateFlow(0L)
-    private var isAutoPaused = false
 
     private var timerJob: Job? = null
     private var locationJob: Job? = null
@@ -91,7 +91,6 @@ class TrackingService : LifecycleService() {
     private fun startForegroundService() {
         // 1. Устанавливаем статус
         isTracking.value = true
-        isAutoPaused = false // Сбрасываем автопаузу при ручном старте
 
         // 2. Foreground уведомление
         val notification = notificationHelper.createNotification()
@@ -120,41 +119,61 @@ class TrackingService : LifecycleService() {
         locationJob?.cancel() // На всякий случай
         locationJob = locationClient.getLocationUpdates(2000L)
             .onEach { location ->
+                // Обновляем скорость всегда, даже на паузе, чтобы видеть "0"
+                val speed = location.speed * 3.6f
+                currentSpeedKmh.value = speed
+
+                // Определяем, должны ли мы стоять (скорость < порога)
+                val shouldBePaused = RideStatsCalculator.shouldAutoPause(location.speed)
+
                 if (isTracking.value) {
-                    // Твоя логика обработки координат...
-                    val speed = location.speed * 3.6f
-                    currentSpeedKmh.value = speed
-
-                    isAutoPaused = RideStatsCalculator.shouldAutoPause(location.speed)
-
-                    if (!isAutoPaused) {
+                    if (shouldBePaused) {
+                        // Ехали, но остановились -> Ставим на паузу (UI покажет кнопки RESUME/STOP)
+                        pauseService()
+                    } else {
+                        // Едем нормально -> Записываем данные
                         val newPoint = location.toTrackingPoint()
                         addPointAndCalculate(newPoint)
                         pathPoints.value += location
                         TrackingService.totalDistanceMetres.value = this.totalDistanceMetres
-                    } else {
-                        currentSpeedKmh.value = 0f
                     }
-
-                    if (startLocation == null) {
-                        startLocation = location
-                    } else {
-                        val distanceToStart = location.distanceTo(startLocation!!)
-
-                        // 1. Проверяем, отъехали ли мы достаточно далеко
-                        if (distanceToStart > 100f) {
-                            hasLeftStartThreshold = true
-                        }
-
-                        // 2. Если уже отъезжали и вернулись ближе 20 метров — стоп
-                        if (hasLeftStartThreshold && distanceToStart < 20f) {
-                            stopService()
-                            events.value = SHOW_STOP_DIALOG
-                        }
+                } else {
+                    // Мы на паузе (автоматической или ручной)
+                    if (!shouldBePaused) {
+                        // Начали движение -> Авто-старт
+                        isTracking.value = true
+                        startTimer()
                     }
                 }
+
+                // Логика диалога окончания поездки (работает независимо от паузы)
+                checkStopDialogConditions(location)
             }
             .launchIn(serviceScope)
+    }
+
+    private fun checkStopDialogConditions(location: Location) {
+        if (startLocation == null) {
+            startLocation = location
+        } else {
+            val distanceToStart = location.distanceTo(startLocation!!)
+
+            // 1. Проверяем, отъехали ли мы достаточно далеко
+            if (distanceToStart > 100f) {
+                hasLeftStartThreshold = true
+            }
+
+            // 2. Логика авто-стопа
+            // Если отъехали (>100м) и вернулись (<20м) -> показать диалог
+            if (hasLeftStartThreshold && distanceToStart < 20f) {
+                events.value = SHOW_STOP_DIALOG
+            }
+
+            // Если снова отъехали от старта (> 50м), скрываем диалог
+            if (hasLeftStartThreshold && distanceToStart > 50f) {
+                events.value = HIDE_STOP_DIALOG
+            }
+        }
     }
 
     private fun startTimer() {
@@ -163,7 +182,7 @@ class TrackingService : LifecycleService() {
             // Убеждаемся, что цикл видит актуальное значение
             while (isTracking.value) {
                 delay(1000L)
-                if (!isAutoPaused && isTracking.value) {
+                if (isTracking.value) {
                     // Прямое обновление статического поля
                     TrackingService.durationInSeconds.value += 1
                     // И локального для сохранения в БД
@@ -216,27 +235,37 @@ class TrackingService : LifecycleService() {
                     routePoints = pointsToSave
                 )
                 repository.saveFullRide(finalRide, pointsToSave)
-
-                // После сохранения очищаем локальные данные
-                resetTrackingData()
             }
         }
     }
 
     private fun resetTrackingData() {
-        allPoints.clear()
+        // Сбрасываем статические поля, чтобы UI обновился
+        isTracking.value = false
         pathPoints.value = emptyList()
+        TrackingService.totalDistanceMetres.value = 0.0
+        TrackingService.currentSpeedKmh.value = 0f
+        TrackingService.durationInSeconds.value = 0L
+        TrackingService.events.value = null
+        
+        // Сбрасываем локальные переменные
+        allPoints.clear()
         totalDistanceMetres = 0.0
         maxSpeedKmh = 0f
         durationInSeconds.value = 0L
+        startLocation = null
+        hasLeftStartThreshold = false
     }
 
-
     private fun stopService() {
-        saveRideToDb() // Сначала сохраняем
-        isTracking.value = false
+        // 1. Сохраняем (копию данных)
+        saveRideToDb()
+        
+        // 2. Сбрасываем UI (сразу же, не дожидаясь БД)
+        resetTrackingData()
+
+        // 3. Останавливаем сервис
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
-
 }

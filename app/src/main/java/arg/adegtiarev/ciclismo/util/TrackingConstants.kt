@@ -10,4 +10,5 @@ object TrackingConstants {
     const val NOTIFICATION_ID = 1
 
     const val SHOW_STOP_DIALOG = "SHOW_STOP_DIALOG"
+    const val HIDE_STOP_DIALOG = "HIDE_STOP_DIALOG"
 }
