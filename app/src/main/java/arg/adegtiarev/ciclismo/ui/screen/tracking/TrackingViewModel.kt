@@ -1,4 +1,4 @@
-package arg.adegtiarev.ciclismo.ui.viewmodel
+package arg.adegtiarev.ciclismo.ui.screen.tracking
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class MainViewModel @Inject constructor(
+class TrackingViewModel @Inject constructor(
     private val rideRepository: RideRepository,
     private val locationClient: LocationClient
 ) : ViewModel() {
@@ -37,19 +37,19 @@ class MainViewModel @Inject constructor(
     }
 
     // Подпишемся на события сервиса (можно добавить в init или отдельный Flow)
-    val serviceEvents = TrackingService.events
+    val serviceEvents = TrackingService.Companion.events
 
     fun clearServiceEvent() {
-        TrackingService.events.value = null
+        TrackingService.Companion.events.value = null
     }
 
     // Объединяем данные из сервиса в один State для UI
     val rideState = combine(
-        TrackingService.isTracking,
-        TrackingService.currentSpeedKmh,
-        TrackingService.totalDistanceMetres,
-        TrackingService.durationInSeconds,
-        TrackingService.pathPoints
+        TrackingService.Companion.isTracking,
+        TrackingService.Companion.currentSpeedKmh,
+        TrackingService.Companion.totalDistanceMetres,
+        TrackingService.Companion.durationInSeconds,
+        TrackingService.Companion.pathPoints
     ) { tracking, speed, distance, duration, points ->
         RideState(
             isTracking = tracking,
@@ -59,7 +59,7 @@ class MainViewModel @Inject constructor(
             isAutoPaused = false, // Можно добавить логику из сервиса если нужно
             points = points.map { it.toTrackingPoint() } // Конвертируем для UI
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RideState())
+    }.stateIn(viewModelScope, SharingStarted.Companion.WhileSubscribed(5000), RideState())
 
     // Метод для запуска/остановки сервиса
     fun onAction(action: String) {
@@ -72,14 +72,14 @@ class MainViewModel @Inject constructor(
             _serviceCommand.send(action)
         }
     }
-    
+
     init {
         // При старте пробуем получить последнюю локацию, чтобы карта не показывала Африку
         viewModelScope.launch {
              locationClient.getLastLocation()?.let { location ->
                  // Если точек еще нет, добавляем начальную только для отображения на карте
-                 if (TrackingService.pathPoints.value.isEmpty()) {
-                     TrackingService.pathPoints.value = listOf(location)
+                 if (TrackingService.Companion.pathPoints.value.isEmpty()) {
+                     TrackingService.Companion.pathPoints.value = listOf(location)
                  }
              }
         }

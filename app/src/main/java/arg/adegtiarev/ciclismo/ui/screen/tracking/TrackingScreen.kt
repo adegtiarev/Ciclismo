@@ -1,4 +1,4 @@
-package arg.adegtiarev.ciclismo.ui.screen
+package arg.adegtiarev.ciclismo.ui.screen.tracking
 
 import android.Manifest
 import android.content.Intent
@@ -16,10 +16,16 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,13 +39,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavController
+import arg.adegtiarev.ciclismo.R
 import arg.adegtiarev.ciclismo.data.service.TrackingService
 import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import arg.adegtiarev.ciclismo.ui.state.RideState
-import arg.adegtiarev.ciclismo.ui.viewmodel.MainViewModel
+import arg.adegtiarev.ciclismo.ui.screen.tracking.TrackingViewModel
 import arg.adegtiarev.ciclismo.util.TrackingConstants
 import arg.adegtiarev.ciclismo.util.TrackingConstants.HIDE_STOP_DIALOG
 import arg.adegtiarev.ciclismo.util.TrackingConstants.SHOW_STOP_DIALOG
@@ -68,10 +77,11 @@ fun KeepScreenOn() {
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TrackingScreen(
-    viewModel: MainViewModel = hiltViewModel()
+    navController: NavController,
+    viewModel: TrackingViewModel = hiltViewModel()
 ) {
     val state by viewModel.rideState.collectAsState()
     val context = LocalContext.current
@@ -150,6 +160,20 @@ fun TrackingScreen(
     if (permissionState.allPermissionsGranted) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    title = { Text("Ride") },
+                    navigationIcon = {
+                        // Кнопка назад работает, только если запись НЕ идет
+                        IconButton(
+                            onClick = { navController.popBackStack() },
+                            enabled = !state.isTracking // Блокируем кнопку, если идет запись
+                        ) {
+                            Icon(painter = painterResource(id = R.drawable.ic_arrow_back), contentDescription = "Back")
+                        }
+                    }
+                )
+            },
             bottomBar = {
                 TrackingBottomPanel(
                     state = state,
@@ -167,7 +191,19 @@ fun TrackingScreen(
             }
         }
     } else {
-        Scaffold(modifier = Modifier.fillMaxSize()) { paddingValues ->
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    title = { Text("Ride") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(painter = painterResource(id = R.drawable.ic_arrow_back), contentDescription = "Back")
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -259,7 +295,7 @@ fun TrackingBottomPanel(
     onResumeClick: () -> Unit,
     onStopClick: () -> Unit
 ) {
-    androidx.compose.material3.Surface(
+    Surface(
         tonalElevation = 8.dp,
         shadowElevation = 8.dp
     ) {
@@ -330,8 +366,8 @@ fun TrackingBottomPanel(
 @Composable
 fun StatisticItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
-        Text(text = value, style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+        Text(text = label, style = MaterialTheme.typography.labelMedium)
+        Text(text = value, style = MaterialTheme.typography.titleLarge)
     }
 }
 

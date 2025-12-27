@@ -5,12 +5,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import arg.adegtiarev.ciclismo.ui.screen.TrackingScreen
+import arg.adegtiarev.ciclismo.ui.screen.home.HomeScreen
+import arg.adegtiarev.ciclismo.ui.screen.tracking.TrackingScreen
 
 
 sealed class Screen(val route: String) {
     object Tracking : Screen("tracking")
-    object History : Screen("history")
+    object Home : Screen("home")
 }
 
 @Composable
@@ -19,13 +20,19 @@ fun Navigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Tracking.route
+        startDestination = Screen.Home.route
     ) {
         composable(Screen.Tracking.route) {
-            TrackingScreen()
+            TrackingScreen(
+                navController = navController
+            )
         }
-        composable(Screen.History.route) {
-            //HistoryScreen() // Здесь будет HistoryScreen в нем будет общая статистика по всем поездкам + список всех поездок
+        composable(Screen.Home.route) {
+            HomeScreen(
+                onNavigateToTracking = {
+                    navController.navigate(Screen.Tracking.route)
+                }
+            )
         }
     }
 }
