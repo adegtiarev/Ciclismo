@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import arg.adegtiarev.ciclismo.data.local.mapper.toTrackingPoint
 import arg.adegtiarev.ciclismo.data.service.TrackingService
+import arg.adegtiarev.ciclismo.domain.LocationClient
 import arg.adegtiarev.ciclismo.domain.RideRepository
 import arg.adegtiarev.ciclismo.ui.state.RideState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +21,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val rideRepository: RideRepository
+    private val rideRepository: RideRepository,
+    private val locationClient: LocationClient
 ) : ViewModel() {
 
     // Канал для разовых событий (команд запуска сервиса)
@@ -68,6 +70,18 @@ class MainViewModel @Inject constructor(
     fun sendCommand(action: String) {
         viewModelScope.launch {
             _serviceCommand.send(action)
+        }
+    }
+    
+    init {
+        // При старте пробуем получить последнюю локацию, чтобы карта не показывала Африку
+        viewModelScope.launch {
+             locationClient.getLastLocation()?.let { location ->
+                 // Если точек еще нет, добавляем начальную только для отображения на карте
+                 if (TrackingService.pathPoints.value.isEmpty()) {
+                     TrackingService.pathPoints.value = listOf(location)
+                 }
+             }
         }
     }
 }

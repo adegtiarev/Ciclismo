@@ -15,6 +15,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class DefaultLocationClient(
     private val context: Context,
@@ -50,6 +51,18 @@ class DefaultLocationClient(
             awaitClose {
                 client.removeLocationUpdates(locationCallback)
             }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    override suspend fun getLastLocation(): Location? {
+        if(!context.hasLocationPermission()) {
+            return null
+        }
+        return try {
+            client.lastLocation.await()
+        } catch (e: Exception) {
+            null
         }
     }
 }

@@ -62,6 +62,7 @@ dependencies {
 
     // Google Play Services для геолокации
     implementation(libs.play.services.location)
+    implementation(libs.kotlinx.coroutines.play.services) // Добавили зависимость для await()
 
     // Lifecycle (нужен для LifecycleService и работы Flow в сервисе)
     implementation(libs.androidx.lifecycle.service)
@@ -72,9 +73,6 @@ dependencies {
 
     // Maps
     implementation(libs.maps.compose)
-
-    // Navigation Compose
-    implementation(libs.androidx.navigation.compose)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
