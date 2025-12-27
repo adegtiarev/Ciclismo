@@ -1,7 +1,6 @@
 package arg.adegtiarev.ciclismo.data.local.repository
 
 import arg.adegtiarev.ciclismo.data.local.dao.RideDao
-import arg.adegtiarev.ciclismo.data.local.dao.TrackingPointDao
 import arg.adegtiarev.ciclismo.data.local.mapper.toDomain
 import arg.adegtiarev.ciclismo.data.local.mapper.toEntity
 import arg.adegtiarev.ciclismo.domain.model.Ride
@@ -13,7 +12,6 @@ import javax.inject.Inject
 
 class RideRepositoryImpl @Inject constructor(
     private val rideDao: RideDao,
-    private val trackingPointDao: TrackingPointDao
 ) : RideRepository {
     override suspend fun saveRide(ride: Ride): Long {
         return rideDao.insertRide(ride.toEntity())
@@ -35,21 +33,6 @@ class RideRepositoryImpl @Inject constructor(
     override fun getAllRides(): Flow<List<Ride>> {
         return rideDao.getAllRides().map { entities ->
             entities.map { it.toDomain() } // Uses default emptyList() for points
-        }
-    }
-
-    override suspend fun addTrackingPoints(points: List<TrackingPoint>) {
-        val entities = points.map { it.toEntity() }
-        trackingPointDao.insertTrackingPoints(entities)
-    }
-
-    override suspend fun getTrackingPointsForRide(rideId: Long): List<TrackingPoint> {
-        return trackingPointDao.getTrackingPointsForRide(rideId).map { it.toDomain() }
-    }
-
-    override fun getTrackingPointsForRideFlow(rideId: Long): Flow<List<TrackingPoint>> {
-        return trackingPointDao.getTrackingPointsForRideFlow(rideId).map { entities ->
-            entities.map { it.toDomain() }
         }
     }
 

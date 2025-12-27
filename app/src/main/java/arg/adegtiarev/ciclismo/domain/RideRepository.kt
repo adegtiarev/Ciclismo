@@ -10,11 +10,11 @@ interface RideRepository {
     suspend fun deleteRide(ride: Ride)
     suspend fun deleteAllRides()
     fun getAllRides(): Flow<List<Ride>>
-    suspend fun addTrackingPoints(points: List<TrackingPoint>)
-    suspend fun getTrackingPointsForRide(rideId: Long): List<TrackingPoint>
-    fun getTrackingPointsForRideFlow(rideId: Long): Flow<List<TrackingPoint>>
-    suspend fun saveFullRide(ride: Ride, points: List<TrackingPoint>): Long // Теперь возвращает Long
-    
+    suspend fun saveFullRide(
+        ride: Ride,
+        points: List<TrackingPoint>
+    ): Long // Теперь возвращает Long
+
     // Методы статистики
     fun getTotalDistance(): Flow<Double>
     fun getTotalDuration(): Flow<Long>

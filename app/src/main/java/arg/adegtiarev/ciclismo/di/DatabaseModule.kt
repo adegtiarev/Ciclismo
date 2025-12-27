@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import arg.adegtiarev.ciclismo.data.local.CiclismoDatabase
 import arg.adegtiarev.ciclismo.data.local.dao.RideDao
-import arg.adegtiarev.ciclismo.data.local.dao.TrackingPointDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,8 +31,4 @@ object DatabaseModule {
         return database.rideDao()
     }
 
-    @Provides
-    fun provideTrackingPointDao(database: CiclismoDatabase): TrackingPointDao {
-        return database.trackingPointDao()
-    }
 }

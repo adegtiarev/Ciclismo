@@ -57,15 +57,3 @@ fun TrackingPointEntity.toDomain(): TrackingPoint = TrackingPoint(
     speed = this.speed,
     timestamp = this.timestamp
 )
-
-// Location -> TrackingPoint
-fun Location.toTrackingPoint(rideId: Long = 0): TrackingPoint {
-    return TrackingPoint(
-        id = 0,
-        rideId = rideId,
-        latitude = latitude,
-        longitude = longitude,
-        speed = speed,
-        timestamp = time
-    )
-}
