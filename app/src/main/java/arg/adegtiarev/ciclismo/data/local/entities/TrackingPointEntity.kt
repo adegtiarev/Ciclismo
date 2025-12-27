@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import arg.adegtiarev.ciclismo.data.local.entities.RideEntity
 
 @Entity(
     tableName = "tracking_points",
@@ -16,7 +15,7 @@ import arg.adegtiarev.ciclismo.data.local.entities.RideEntity
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("rideId")] // Хорошая практика добавлять индекс для внешних ключей
+    indices = [Index("rideId")] // It's a good practice to add an index for foreign keys
 )
 data class TrackingPointEntity(
     @PrimaryKey(autoGenerate = true)

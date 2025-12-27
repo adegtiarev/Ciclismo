@@ -3,7 +3,7 @@ package arg.adegtiarev.ciclismo.domain.calculator
 import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 
 object RideStatsCalculator {
-    // Вспомогательная функция для расчета расстояния между двумя точками
+    // Helper function to calculate distance between two points
     fun calculateDistance(points: List<TrackingPoint>): Double {
         var distance = 0.0
         for (i in 0 until points.size - 1) {
@@ -21,7 +21,7 @@ object RideStatsCalculator {
         return distance
     }
 
-    // Логика автопаузы: если скорость меньше 0.5 м/с (1.8 км/ч)
+    // Auto-pause logic: if speed is less than 0.5 m/s (1.8 km/h)
     fun shouldAutoPause(currentSpeedMps: Float): Boolean {
         return currentSpeedMps < 0.5f
     }

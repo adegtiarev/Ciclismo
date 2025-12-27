@@ -45,7 +45,7 @@ import arg.adegtiarev.ciclismo.util.formatDuration
 @Composable
 fun HomeScreen(
     onNavigateToTracking: () -> Unit,
-    onNavigateToDetail: (Long) -> Unit, // Добавили параметр
+    onNavigateToDetail: (Long) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -69,7 +69,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Панель статистики (верхняя часть)
+            // Statistics panel (top section)
             StatisticsPanel(state = state)
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -80,7 +80,7 @@ fun HomeScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Список истории (нижняя часть)
+            // History list (bottom section)
             if (state.rides.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -100,10 +100,10 @@ fun HomeScreen(
                         .weight(1f)
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp) // Отступ под FAB
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp) // Padding for the FAB
                 ) {
                     items(state.rides) { ride ->
-                        RideItem(ride = ride, onClick = { onNavigateToDetail(ride.id) }) // Вызываем колбэк
+                        RideItem(ride = ride, onClick = { onNavigateToDetail(ride.id) }) // Call the callback
                     }
                 }
             }
@@ -189,7 +189,7 @@ fun RideItem(ride: Ride, onClick: () -> Unit) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Placeholder для миниатюры карты (иконка)
+            // Placeholder for the map thumbnail (icon)
             Box(
                 modifier = Modifier
                     .size(50.dp)

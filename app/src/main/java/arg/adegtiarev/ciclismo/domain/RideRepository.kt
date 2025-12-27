@@ -11,9 +11,9 @@ interface RideRepository {
     suspend fun saveFullRide(
         ride: Ride,
         points: List<TrackingPoint>
-    ): Long // Теперь возвращает Long
+    ): Long
 
-    // Методы статистики
+    // Statistics methods
     fun getTotalDistance(): Flow<Double>
     fun getTotalDuration(): Flow<Long>
     fun getTotalRidesCount(): Flow<Int>
