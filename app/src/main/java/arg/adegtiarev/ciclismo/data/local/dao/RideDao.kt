@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.Flow
 interface RideDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRide(ride: RideEntity): Long // Возвращает ID созданной поездки
+    
+    @Query("SELECT * FROM rides WHERE id = :rideId")
+    suspend fun getRideById(rideId: Long): RideEntity?
 
     @Query("SELECT * FROM rides ORDER BY timestamp DESC")
     fun getAllRides(): Flow<List<RideEntity>>
@@ -31,10 +34,11 @@ interface RideDao {
     suspend fun deleteAllRides()
 
     @Transaction
-    suspend fun saveFullRide(ride: RideEntity, points: List<TrackingPointEntity>) {
+    suspend fun saveFullRide(ride: RideEntity, points: List<TrackingPointEntity>): Long {
         val rideId = insertRide(ride) // Получаем сгенерированный ID
         val pointsWithId = points.map { it.copy(rideId = rideId) } // Привязываем точки к ID поездки
         insertTrackingPoints(pointsWithId)
+        return rideId
     }
 
     // Добавляем этот метод сюда, чтобы saveFullRide мог его вызвать

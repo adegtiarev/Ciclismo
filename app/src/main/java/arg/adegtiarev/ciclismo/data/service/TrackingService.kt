@@ -243,7 +243,11 @@ class TrackingService : LifecycleService() {
                     maxSpeed = maxSpeedKmh.toDouble(),
                     routePoints = pointsToSave
                 )
-                repository.saveFullRide(finalRide, pointsToSave)
+                // Теперь мы получаем ID, который можем отправить в UI
+                val rideId = repository.saveFullRide(finalRide, pointsToSave)
+                
+                // Отправляем событие в UI
+                events.emit("SAVED_$rideId")
             }
         }
     }

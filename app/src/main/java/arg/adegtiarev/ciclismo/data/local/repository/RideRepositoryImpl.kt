@@ -20,9 +20,10 @@ class RideRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getRideById(id: Long): Ride? {
-        // Здесь мы можем использовать getRideWithPoints из DAO
-        // и собрать объект Ride вместе со списком точек
-        return null // Реализуем детально, когда дойдем до экрана деталей
+        val rideEntity = rideDao.getRideById(id) ?: return null
+        val points = trackingPointDao.getTrackingPointsForRide(id).map { it.toDomain() }
+        // Теперь toDomain(points) будет работать корректно
+        return rideEntity.toDomain(points)
     }
 
     override suspend fun deleteRide(ride: Ride) {
@@ -35,7 +36,7 @@ class RideRepositoryImpl @Inject constructor(
 
     override fun getAllRides(): Flow<List<Ride>> {
         return rideDao.getAllRides().map { entities ->
-            entities.map { it.toDomain() }
+            entities.map { it.toDomain() } // Использует дефолтный emptyList() точек
         }
     }
 
@@ -54,8 +55,9 @@ class RideRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun saveFullRide(ride: Ride, points: List<TrackingPoint>) {
-        rideDao.saveFullRide(
+    override suspend fun saveFullRide(ride: Ride, points: List<TrackingPoint>): Long {
+        // Возвращаем результат из DAO
+        return rideDao.saveFullRide(
             ride.toEntity(),
             points.map { it.toEntity() }
         )

@@ -79,7 +79,8 @@ fun KeepScreenOn() {
 @Composable
 fun TrackingScreen(
     navController: NavController,
-    viewModel: TrackingViewModel = hiltViewModel()
+    viewModel: TrackingViewModel = hiltViewModel(),
+    onNavigateToDetail: (Long) -> Unit
 ) {
     val state by viewModel.rideState.collectAsState()
     val context = LocalContext.current
@@ -91,11 +92,21 @@ fun TrackingScreen(
 
     // Следим за событиями от сервиса
     LaunchedEffect(serviceEvent) {
-        when (serviceEvent) {
-            SHOW_STOP_DIALOG -> viewModel.setDialogVisibility(true)
-            HIDE_STOP_DIALOG -> {
-                viewModel.setDialogVisibility(false)
-                viewModel.clearServiceEvent()
+        val event = serviceEvent
+        if (event != null) {
+            when {
+                event == SHOW_STOP_DIALOG -> viewModel.setDialogVisibility(true)
+                event == HIDE_STOP_DIALOG -> {
+                    viewModel.setDialogVisibility(false)
+                    viewModel.clearServiceEvent()
+                }
+                event.startsWith("SAVED_") -> {
+                    val rideId = event.substringAfter("SAVED_").toLongOrNull()
+                    viewModel.clearServiceEvent()
+                    if (rideId != null) {
+                        onNavigateToDetail(rideId)
+                    }
+                }
             }
         }
     }

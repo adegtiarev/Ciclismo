@@ -45,6 +45,7 @@ import arg.adegtiarev.ciclismo.util.formatDuration
 @Composable
 fun HomeScreen(
     onNavigateToTracking: () -> Unit,
+    onNavigateToDetail: (Long) -> Unit, // Добавили параметр
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -102,7 +103,7 @@ fun HomeScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp) // Отступ под FAB
                 ) {
                     items(state.rides) { ride ->
-                        RideItem(ride = ride, onClick = { /* TODO: Navigate to details */ })
+                        RideItem(ride = ride, onClick = { onNavigateToDetail(ride.id) }) // Вызываем колбэк
                     }
                 }
             }
