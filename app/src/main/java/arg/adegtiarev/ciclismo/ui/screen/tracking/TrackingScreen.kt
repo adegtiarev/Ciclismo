@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -48,7 +47,6 @@ import arg.adegtiarev.ciclismo.R
 import arg.adegtiarev.ciclismo.data.service.TrackingService
 import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import arg.adegtiarev.ciclismo.ui.state.RideState
-import arg.adegtiarev.ciclismo.ui.screen.tracking.TrackingViewModel
 import arg.adegtiarev.ciclismo.util.TrackingConstants
 import arg.adegtiarev.ciclismo.util.TrackingConstants.HIDE_STOP_DIALOG
 import arg.adegtiarev.ciclismo.util.TrackingConstants.SHOW_STOP_DIALOG

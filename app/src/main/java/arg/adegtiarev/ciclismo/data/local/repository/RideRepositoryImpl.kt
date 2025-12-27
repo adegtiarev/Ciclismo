@@ -60,4 +60,16 @@ class RideRepositoryImpl @Inject constructor(
             points.map { it.toEntity() }
         )
     }
+
+    override fun getTotalDistance(): Flow<Double> {
+        return rideDao.getTotalDistance().map { it ?: 0.0 }
+    }
+
+    override fun getTotalDuration(): Flow<Long> {
+        return rideDao.getTotalDuration().map { it ?: 0L }
+    }
+
+    override fun getTotalRidesCount(): Flow<Int> {
+        return rideDao.getTotalRidesCount()
+    }
 }
