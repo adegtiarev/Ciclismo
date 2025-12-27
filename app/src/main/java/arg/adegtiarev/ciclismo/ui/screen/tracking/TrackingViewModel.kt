@@ -25,13 +25,9 @@ class TrackingViewModel @Inject constructor(
     private val locationClient: LocationClient
 ) : ViewModel() {
 
-    // Канал для разовых событий (команд запуска сервиса)
+    // Channel for one-time events (service commands)
     private val _serviceCommand = Channel<String>()
     val serviceCommand = _serviceCommand.receiveAsFlow()
-    
-    // Канал для навигации
-    private val _navigationEvent = Channel<String>()
-    val navigationEvent = _navigationEvent.receiveAsFlow()
 
     var showExitDialog by mutableStateOf(false)
         private set
@@ -40,24 +36,14 @@ class TrackingViewModel @Inject constructor(
         showExitDialog = visible
     }
 
-    // Подпишемся на события сервиса (можно добавить в init или отдельный Flow)
+    // Subscribe to service events
     val serviceEvents = TrackingService.events
 
     fun clearServiceEvent() {
         TrackingService.events.value = null
     }
-    
-    fun onServiceEvent(event: String) {
-        if (event.startsWith("SAVED_")) {
-            val rideId = event.substringAfter("SAVED_")
-            viewModelScope.launch {
-                _navigationEvent.send(rideId)
-            }
-            clearServiceEvent()
-        }
-    }
 
-    // Объединяем данные из сервиса в один State для UI
+    // Combine data from the service into a single state for the UI
     val rideState = combine(
         TrackingService.isTracking,
         TrackingService.currentSpeedKmh,
@@ -70,16 +56,10 @@ class TrackingViewModel @Inject constructor(
             distanceMetres = distance,
             durationSeconds = duration,
             currentSpeedKmh = speed,
-            isAutoPaused = false, // Можно добавить логику из сервиса если нужно
-            points = points.map { it.toTrackingPoint() } // Конвертируем для UI
+            isAutoPaused = false, // Logic can be added from the service if needed
+            points = points.map { it.toTrackingPoint() } // Convert for the UI
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RideState())
-
-    // Метод для запуска/остановки сервиса
-    fun onAction(action: String) {
-        // Здесь мы будем отправлять Intent в TrackingService
-        sendCommand(action)
-    }
 
     fun sendCommand(action: String) {
         viewModelScope.launch {
@@ -88,10 +68,10 @@ class TrackingViewModel @Inject constructor(
     }
 
     init {
-        // При старте пробуем получить последнюю локацию, чтобы карта не показывала Африку
+        // On start, try to get the last location to avoid showing Africa on the map
         viewModelScope.launch {
              locationClient.getLastLocation()?.let { location ->
-                 // Если точек еще нет, добавляем начальную только для отображения на карте
+                 // If there are no points yet, add an initial one just for map display
                  if (TrackingService.pathPoints.value.isEmpty()) {
                      TrackingService.pathPoints.value = listOf(location)
                  }

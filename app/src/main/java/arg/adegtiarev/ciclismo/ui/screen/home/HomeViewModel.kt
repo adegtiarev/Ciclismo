@@ -33,7 +33,7 @@ class HomeViewModel @Inject constructor(
             totalRides = count,
             totalDistance = distance,
             totalTimeSeconds = duration,
-            rides = rides.sortedByDescending { it.timestamp } // Сортируем от новых к старым
+            rides = rides.sortedByDescending { it.timestamp } // Sort from newest to oldest
         )
     }.stateIn(
         scope = viewModelScope,

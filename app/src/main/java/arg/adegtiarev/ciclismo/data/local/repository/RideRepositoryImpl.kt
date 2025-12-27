@@ -20,10 +20,8 @@ class RideRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getRideById(id: Long): Ride? {
-        val rideEntity = rideDao.getRideById(id) ?: return null
-        val points = trackingPointDao.getTrackingPointsForRide(id).map { it.toDomain() }
-        // Теперь toDomain(points) будет работать корректно
-        return rideEntity.toDomain(points)
+        // Now using the efficient @Transaction method
+        return rideDao.getRideWithPoints(id)?.toDomain()
     }
 
     override suspend fun deleteRide(ride: Ride) {
@@ -36,7 +34,7 @@ class RideRepositoryImpl @Inject constructor(
 
     override fun getAllRides(): Flow<List<Ride>> {
         return rideDao.getAllRides().map { entities ->
-            entities.map { it.toDomain() } // Использует дефолтный emptyList() точек
+            entities.map { it.toDomain() } // Uses default emptyList() for points
         }
     }
 
@@ -56,7 +54,6 @@ class RideRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveFullRide(ride: Ride, points: List<TrackingPoint>): Long {
-        // Возвращаем результат из DAO
         return rideDao.saveFullRide(
             ride.toEntity(),
             points.map { it.toEntity() }

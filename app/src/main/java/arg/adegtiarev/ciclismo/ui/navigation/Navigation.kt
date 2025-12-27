@@ -32,8 +32,8 @@ fun Navigation(
             TrackingScreen(
                 navController = navController,
                 onNavigateToDetail = { rideId ->
-                    // При переходе с трекинга на детали, убираем трекинг из стека, 
-                    // чтобы кнопка "Назад" возвращала на Главный экран
+                    // When navigating from tracking to detail, remove tracking from backstack,
+                    // so the "Back" button returns to Home Screen
                     navController.navigate(Screen.Detail.createRoute(rideId)) {
                         popUpTo(Screen.Home.route) {
                             inclusive = false

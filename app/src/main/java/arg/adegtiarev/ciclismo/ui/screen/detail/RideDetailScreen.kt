@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,6 +19,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +56,36 @@ fun RideDetailScreen(
     viewModel: RideDetailViewModel = hiltViewModel()
 ) {
     val ride by viewModel.ride.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvent.collect {
+            when (it) {
+                is NavigationEvent.NavigateBack -> navController.popBackStack()
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Ride") },
+            text = { Text("Are you sure you want to delete this ride? This action cannot be undone.") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.deleteRide()
+                    showDeleteDialog = false
+                }) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -61,6 +94,11 @@ fun RideDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(painter = painterResource(id = R.drawable.ic_arrow_back), contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(painter = painterResource(id = R.drawable.ic_delete), contentDescription = "Delete ride")
                     }
                 }
             )
@@ -74,10 +112,8 @@ fun RideDetailScreen(
             if (ride != null) {
                 val currentRide = ride!!
                 
-                // Карта
                 DetailMap(ride = currentRide)
 
-                // Статистика (снизу поверх карты)
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -98,22 +134,18 @@ fun RideDetailScreen(
 fun DetailMap(ride: Ride) {
     val cameraPositionState = rememberCameraPositionState()
     
-    // Используем remember для трансформации точек, чтобы не пересчитывать при каждой рекомпозиции
     val routePoints = remember(ride) { 
         ride.routePoints.map { LatLng(it.latitude, it.longitude) } 
     }
     
-    // Флаг загрузки карты. CameraUpdateFactory можно использовать только когда карта готова.
     var isMapLoaded by remember { mutableStateOf(false) }
 
-    // Центрируем карту на маршруте ТОЛЬКО когда карта загрузилась и есть точки
     LaunchedEffect(routePoints, isMapLoaded) {
         if (routePoints.isNotEmpty() && isMapLoaded) {
             val boundsBuilder = LatLngBounds.builder()
             routePoints.forEach { boundsBuilder.include(it) }
             val bounds = boundsBuilder.build()
             
-            // Отступ 100px, чтобы маршрут не прилипал к краям
             try {
                 cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 100))
             } catch (e: Exception) {

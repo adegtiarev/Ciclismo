@@ -21,7 +21,6 @@ fun formatDistance(meters: Double): String {
 }
 
 fun formatDate(timestamp: Long): String {
-    // Формат: 1 сентября 2025
-    val sdf = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
+    val sdf = SimpleDateFormat("d MMMM yyyy", Locale.US)
     return sdf.format(Date(timestamp))
 }

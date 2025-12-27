@@ -24,30 +24,30 @@ class DefaultLocationClient(
     @SuppressLint("MissingPermission")
     override fun getLocationUpdates(interval: Long): Flow<Location> {
         return callbackFlow {
-            // 1. Проверяем разрешения (упрощенно)
+            // 1. Check permissions (simplified)
             if(!context.hasLocationPermission()) {
                 throw LocationClient.LocationException("Missing location permission")
             }
 
-            // 2. Настраиваем запрос
+            // 2. Configure request
             val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, interval)
                 .setMinUpdateIntervalMillis(interval)
                 .build()
 
-            // 3. Создаем колбэк
+            // 3. Create callback
             val locationCallback = object : LocationCallback() {
                 override fun onLocationResult(result: LocationResult) {
                     super.onLocationResult(result)
                     result.locations.lastOrNull()?.let { location ->
-                        launch { send(location) } // Отправляем локацию в поток
+                        launch { send(location) } // Send location to flow
                     }
                 }
             }
 
-            // 4. Регистрируем слушатель
+            // 4. Register listener
             client.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
 
-            // 5. Ждем закрытия потока (очень важно для очистки памяти!)
+            // 5. Wait for close (important for cleanup!)
             awaitClose {
                 client.removeLocationUpdates(locationCallback)
             }

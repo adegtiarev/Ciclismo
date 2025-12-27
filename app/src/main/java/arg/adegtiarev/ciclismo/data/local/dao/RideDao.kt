@@ -14,18 +14,15 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RideDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertRide(ride: RideEntity): Long // Возвращает ID созданной поездки
-    
-    @Query("SELECT * FROM rides WHERE id = :rideId")
-    suspend fun getRideById(rideId: Long): RideEntity?
+    suspend fun insertRide(ride: RideEntity): Long
 
     @Query("SELECT * FROM rides ORDER BY timestamp DESC")
     fun getAllRides(): Flow<List<RideEntity>>
 
-    // Метод для получения поездки со всеми точками
+    // This is the efficient way to get a ride with its points
     @Transaction
     @Query("SELECT * FROM rides WHERE id = :rideId")
-    fun getRideWithPoints(rideId: Long): Flow<RideWithPoints>
+    suspend fun getRideWithPoints(rideId: Long): RideWithPoints?
 
     @Delete
     suspend fun deleteRide(ride: RideEntity)
@@ -35,13 +32,12 @@ interface RideDao {
 
     @Transaction
     suspend fun saveFullRide(ride: RideEntity, points: List<TrackingPointEntity>): Long {
-        val rideId = insertRide(ride) // Получаем сгенерированный ID
-        val pointsWithId = points.map { it.copy(rideId = rideId) } // Привязываем точки к ID поездки
+        val rideId = insertRide(ride)
+        val pointsWithId = points.map { it.copy(rideId = rideId) }
         insertTrackingPoints(pointsWithId)
         return rideId
     }
 
-    // Добавляем этот метод сюда, чтобы saveFullRide мог его вызвать
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrackingPoints(points: List<TrackingPointEntity>)
 

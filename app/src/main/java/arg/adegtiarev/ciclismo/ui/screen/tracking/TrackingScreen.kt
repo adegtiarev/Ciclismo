@@ -90,7 +90,7 @@ fun TrackingScreen(
     val showDialog = viewModel.showExitDialog
     val serviceEvent by viewModel.serviceEvents.collectAsState()
 
-    // Следим за событиями от сервиса
+    // Observe service events
     LaunchedEffect(serviceEvent) {
         val event = serviceEvent
         if (event != null) {
@@ -117,25 +117,25 @@ fun TrackingScreen(
                 viewModel.setDialogVisibility(false)
                 viewModel.clearServiceEvent()
             },
-            title = { Text("Завершить поездку? 🏁") },
-            text = { Text("Похоже, вы вернулись к старту. Хотите сохранить маршрут?") },
+            title = { Text("Finish ride? 🏁") },
+            text = { Text("Looks like you returned to the start. Do you want to save the route?") },
             confirmButton = {
                 Button(onClick = {
                     viewModel.setDialogVisibility(false)
                     viewModel.clearServiceEvent()
                     viewModel.sendCommand(TrackingConstants.ACTION_STOP_SERVICE)
-                }) { Text("Сохранить") }
+                }) { Text("Save") }
             },
             dismissButton = {
                 TextButton(onClick = {
                     viewModel.setDialogVisibility(false)
                     viewModel.clearServiceEvent()
-                }) { Text("Отмена") }
+                }) { Text("Cancel") }
             }
         )
     }
 
-    // Слушаем команды для сервиса
+    // Listen for service commands
     LaunchedEffect(Unit) {
         viewModel.serviceCommand.collect { action ->
             val intent = Intent(context, TrackingService::class.java).apply {
@@ -173,10 +173,10 @@ fun TrackingScreen(
                 TopAppBar(
                     title = { Text("Ride") },
                     navigationIcon = {
-                        // Кнопка назад работает, только если запись НЕ идет
+                        // Back button works only if recording is NOT active
                         IconButton(
                             onClick = { navController.popBackStack() },
-                            enabled = !state.isTracking // Блокируем кнопку, если идет запись
+                            enabled = !state.isTracking // Block button if recording
                         ) {
                             Icon(painter = painterResource(id = R.drawable.ic_arrow_back), contentDescription = "Back")
                         }
@@ -190,7 +190,7 @@ fun TrackingScreen(
                     onPauseClick = { viewModel.sendCommand(TrackingConstants.ACTION_PAUSE_SERVICE) },
                     onResumeClick = { viewModel.sendCommand(TrackingConstants.ACTION_START_OR_RESUME_SERVICE) },
                     onStopClick = {
-                        viewModel.setDialogVisibility(true) // Ручной стоп тоже вызывает диалог
+                        viewModel.setDialogVisibility(true) // Manual stop also triggers dialog
                     }
                 )
             }
@@ -221,11 +221,11 @@ fun TrackingScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Приложению нужен доступ к GPS и уведомлениям для записи маршрута",
+                        text = "The app needs access to GPS and notifications to record the route",
                         modifier = Modifier.padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
                     )
                     Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
-                        Text("Разрешить доступ")
+                        Text("Grant permission")
                     }
                 }
             }
@@ -242,19 +242,19 @@ fun CiclismoMap(points: List<TrackingPoint>) {
         points.map { LatLng(it.latitude, it.longitude) }
     }
 
-    // Авто-центрирование и следование за пользователем
+    // Auto-center and follow user
     LaunchedEffect(path.size, isFollowing) {
         if (isFollowing && path.isNotEmpty()) {
             val lastPoint = path.last()
             
-            // Если мы следуем за пользователем, обновляем и позицию, и азимут
-            // Используем CameraPosition.Builder для сохранения зума и установки bearing
+            // If following, update position and azimuth
+            // Using CameraPosition.Builder to keep zoom and set bearing
             val cameraUpdate = CameraUpdateFactory.newCameraPosition(
                 CameraPosition.Builder()
                     .target(lastPoint)
-                    .zoom(18f) // Держим зум
-                    .bearing(0f) // Пока фиксированный север. Чтобы вращать карту по движению, нужно передавать bearing из Location
-                    .tilt(45f) // Небольшой наклон для красоты
+                    .zoom(18f) // Keep zoom
+                    .bearing(0f) // Fixed north for now. To rotate map by movement, pass bearing from Location
+                    .tilt(45f) // Slight tilt for aesthetics
                     .build()
             )
             
@@ -262,7 +262,7 @@ fun CiclismoMap(points: List<TrackingPoint>) {
         }
     }
 
-    // Отключение слежения только при жесте пользователя
+    // Disable following only on user gesture
     LaunchedEffect(cameraPositionState.isMoving) {
         if (cameraPositionState.isMoving) {
             if (cameraPositionState.cameraMoveStartedReason == CameraMoveStartedReason.GESTURE) {
@@ -278,7 +278,7 @@ fun CiclismoMap(points: List<TrackingPoint>) {
             properties = MapProperties(isMyLocationEnabled = true),
             uiSettings = MapUiSettings(
                 myLocationButtonEnabled = true,
-                compassEnabled = true // Включаем компас
+                compassEnabled = true // Enable compass
             ),
             onMyLocationButtonClick = {
                 isFollowing = true
@@ -314,7 +314,7 @@ fun TrackingBottomPanel(
                 .navigationBarsPadding()
                 .padding(16.dp)
         ) {
-            // Статистика
+            // Stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
@@ -326,14 +326,14 @@ fun TrackingBottomPanel(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Кнопки
+            // Buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                // Если поездка ещё не начата (или сброшена в 0)
+                // If ride not started (or reset to 0)
                 if (state.durationSeconds == 0L && !state.isTracking) {
                     Button(
                         onClick = onStartClick,
@@ -342,7 +342,7 @@ fun TrackingBottomPanel(
                         Text("START RIDE")
                     }
                 } 
-                // Если поездка идет (активна)
+                // If ride is active
                 else if (state.isTracking) {
                     Button(
                         onClick = onPauseClick,
@@ -351,7 +351,7 @@ fun TrackingBottomPanel(
                         Text("PAUSE")
                     }
                 } 
-                // Если поездка на паузе
+                // If ride is paused
                 else {
                     Button(
                         onClick = onResumeClick,

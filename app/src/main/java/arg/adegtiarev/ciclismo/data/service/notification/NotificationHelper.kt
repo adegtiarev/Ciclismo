@@ -18,15 +18,15 @@ class NotificationHelper @Inject constructor(
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     fun createNotification(): Notification {
-        // Создаем канал
+        // Create channel
         val channel = NotificationChannel(
             TrackingConstants.NOTIFICATION_CHANNEL_ID,
             TrackingConstants.NOTIFICATION_CHANNEL_NAME,
-            NotificationManager.IMPORTANCE_LOW // Чтобы не пищало при каждом обновлении
+            NotificationManager.IMPORTANCE_LOW
         )
         notificationManager.createNotificationChannel(channel)
 
-        // Интент, чтобы открыть приложение при клике
+        // Intent to open app when clicked
         val pendingIntent = PendingIntent.getActivity(
             context,
             0,
@@ -39,7 +39,7 @@ class NotificationHelper @Inject constructor(
             .setOngoing(true)
             .setSmallIcon(R.drawable.ic_bike)
             .setContentTitle("Ciclismo")
-            .setContentText("Тренировка записывается...")
+            .setContentText("Tracking ride...")
             .setContentIntent(pendingIntent)
             .build()
     }

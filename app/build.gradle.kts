@@ -60,15 +60,15 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // Google Play Services для геолокации
+    // Google Play Services
     implementation(libs.play.services.location)
-    implementation(libs.kotlinx.coroutines.play.services) // Добавили зависимость для await()
+    implementation(libs.kotlinx.coroutines.play.services)
 
-    // Lifecycle (нужен для LifecycleService и работы Flow в сервисе)
+    // Lifecycle
     implementation(libs.androidx.lifecycle.service)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
-    // Для работы с разрешениями (опционально, но облегчит жизнь в Compose)
+    // Permissions
     implementation(libs.accompanist.permissions)
 
     // Maps
