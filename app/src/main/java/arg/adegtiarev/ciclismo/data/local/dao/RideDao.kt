@@ -40,4 +40,13 @@ interface RideDao {
     // Добавляем этот метод сюда, чтобы saveFullRide мог его вызвать
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrackingPoints(points: List<TrackingPointEntity>)
+
+    @Query("SELECT SUM(distance) FROM rides")
+    fun getTotalDistance(): Flow<Double?>
+
+    @Query("SELECT SUM(duration) FROM rides")
+    fun getTotalDuration(): Flow<Long?>
+
+    @Query("SELECT COUNT(*) FROM rides")
+    fun getTotalRidesCount(): Flow<Int>
 }

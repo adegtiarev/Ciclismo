@@ -11,6 +11,7 @@ import arg.adegtiarev.ciclismo.domain.calculator.RideStatsCalculator
 import arg.adegtiarev.ciclismo.domain.model.Ride
 import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import arg.adegtiarev.ciclismo.util.TrackingConstants
+import arg.adegtiarev.ciclismo.util.TrackingConstants.SHOW_STOP_DIALOG
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +49,9 @@ class TrackingService : LifecycleService() {
     private var timerJob: Job? = null
     private var locationJob: Job? = null
 
+    private var startLocation: Location? = null
+    private var hasLeftStartThreshold = false
+
     companion object {
         val isTracking = MutableStateFlow(false)
 
@@ -58,6 +62,8 @@ class TrackingService : LifecycleService() {
         val currentSpeedKmh = MutableStateFlow(0f)
         val totalDistanceMetres = MutableStateFlow(0.0)
         val durationInSeconds = MutableStateFlow(0L)
+
+        val events = MutableStateFlow<String?>(null) // Для передачи событий в UI
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -117,6 +123,23 @@ class TrackingService : LifecycleService() {
                         TrackingService.totalDistanceMetres.value = this.totalDistanceMetres
                     } else {
                         currentSpeedKmh.value = 0f
+                    }
+
+                    if (startLocation == null) {
+                        startLocation = location
+                    } else {
+                        val distanceToStart = location.distanceTo(startLocation!!)
+
+                        // 1. Проверяем, отъехали ли мы достаточно далеко
+                        if (distanceToStart > 100f) {
+                            hasLeftStartThreshold = true
+                        }
+
+                        // 2. Если уже отъезжали и вернулись ближе 20 метров — стоп
+                        if (hasLeftStartThreshold && distanceToStart < 20f) {
+                            stopService()
+                            events.value = SHOW_STOP_DIALOG
+                        }
                     }
                 }
             }

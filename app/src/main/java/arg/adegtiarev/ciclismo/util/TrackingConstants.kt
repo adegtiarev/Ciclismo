@@ -8,4 +8,6 @@ object TrackingConstants {
     const val NOTIFICATION_CHANNEL_ID = "tracking_channel"
     const val NOTIFICATION_CHANNEL_NAME = "Tracking"
     const val NOTIFICATION_ID = 1
+
+    const val SHOW_STOP_DIALOG = "SHOW_STOP_DIALOG"
 }

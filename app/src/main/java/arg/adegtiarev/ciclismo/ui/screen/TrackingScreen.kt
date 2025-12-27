@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,6 +38,7 @@ import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import arg.adegtiarev.ciclismo.ui.state.RideState
 import arg.adegtiarev.ciclismo.ui.viewmodel.MainViewModel
 import arg.adegtiarev.ciclismo.util.TrackingConstants
+import arg.adegtiarev.ciclismo.util.TrackingConstants.SHOW_STOP_DIALOG
 import arg.adegtiarev.ciclismo.util.formatDistance
 import arg.adegtiarev.ciclismo.util.formatDuration
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -50,11 +54,45 @@ import com.google.maps.android.compose.rememberCameraPositionState
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TrackingScreen(
-    modifier: Modifier = Modifier.statusBarsPadding(),
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val state by viewModel.rideState.collectAsState()
     val context = LocalContext.current
+
+    val showDialog = viewModel.showExitDialog
+    val serviceEvent by viewModel.serviceEvents.collectAsState()
+
+    // Следим за авто-стопом от сервиса
+    LaunchedEffect(serviceEvent) {
+        if (serviceEvent == SHOW_STOP_DIALOG) {
+            viewModel.setDialogVisibility(true)
+
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.setDialogVisibility(false)
+                viewModel.clearServiceEvent()
+            },
+            title = { Text("Завершить поездку? 🏁") },
+            text = { Text("Похоже, вы вернулись к старту. Хотите сохранить маршрут?") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.setDialogVisibility(false)
+                    viewModel.clearServiceEvent()
+                    viewModel.sendCommand(TrackingConstants.ACTION_STOP_SERVICE)
+                }) { Text("Сохранить") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.setDialogVisibility(false)
+                    viewModel.clearServiceEvent()
+                }) { Text("Отмена") }
+            }
+        )
+    }
 
     // Слушаем команды для сервиса
     LaunchedEffect(Unit) {
@@ -84,7 +122,10 @@ fun TrackingScreen(
                     state = state,
                     onStartClick = { viewModel.sendCommand(TrackingConstants.ACTION_START_OR_RESUME_SERVICE) },
                     onPauseClick = { viewModel.sendCommand(TrackingConstants.ACTION_PAUSE_SERVICE) },
-                    onStopClick = { viewModel.sendCommand(TrackingConstants.ACTION_STOP_SERVICE) }
+                    onStopClick = {
+//                        viewModel.sendCommand(TrackingConstants.ACTION_STOP_SERVICE)
+                        viewModel.setDialogVisibility(true)
+                    }
                 )
             }
         ) { paddingValues ->
@@ -122,6 +163,15 @@ fun CiclismoMap(points: List<TrackingPoint>) {
 
     val path = remember(points) {
         points.map { LatLng(it.latitude, it.longitude) }
+    }
+
+    // Авто-центрирование при добавлении новых точек
+    LaunchedEffect(path.size) {
+        if (isFollowing && path.isNotEmpty()) {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(path.last(), 16f)
+            )
+        }
     }
 
     // Слушатель движения карты
@@ -208,7 +258,7 @@ fun TrackingBottomPanel(
                 } else {
                     Button(onClick = onPauseClick) { Text("PAUSE") }
                     Spacer(Modifier.width(16.dp))
-                    androidx.compose.material3.FilledTonalButton(onClick = onStopClick) {
+                    FilledTonalButton(onClick = onStopClick) {
                         Text("STOP", color = Color.Red)
                     }
                 }
@@ -238,9 +288,3 @@ fun TrackingBottomPanelPreview() {
             points = emptyList()
         ), onStartClick = {}, onPauseClick = {}, onStopClick = {})
 }
-
-//@Preview
-//@Composable
-//fun TrackingScreenPreview() {
-//    TrackingScreen()
-//}

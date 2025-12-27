@@ -1,5 +1,8 @@
 package arg.adegtiarev.ciclismo.ui.viewmodel
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import arg.adegtiarev.ciclismo.data.local.mapper.toTrackingPoint
@@ -23,6 +26,20 @@ class MainViewModel @Inject constructor(
     // Канал для разовых событий (команд запуска сервиса)
     private val _serviceCommand = Channel<String>()
     val serviceCommand = _serviceCommand.receiveAsFlow()
+
+    var showExitDialog by mutableStateOf(false)
+        private set
+
+    fun setDialogVisibility(visible: Boolean) {
+        showExitDialog = visible
+    }
+
+    // Подпишемся на события сервиса (можно добавить в init или отдельный Flow)
+    val serviceEvents = TrackingService.events
+
+    fun clearServiceEvent() {
+        TrackingService.events.value = null
+    }
 
     // Объединяем данные из сервиса в один State для UI
     val rideState = combine(
