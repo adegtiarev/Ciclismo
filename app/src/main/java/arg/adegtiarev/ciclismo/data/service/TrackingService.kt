@@ -145,7 +145,8 @@ class TrackingService : LifecycleService() {
                     maxSpeedKmh = _currentSpeedKmh.value
                 }
 
-                if (RideStatsCalculator.shouldAutoPause(location.speed)) {
+                // Prevent auto-pausing on the very first point to avoid the flicker issue.
+                if (RideStatsCalculator.shouldAutoPause(location.speed) && _pathPoints.value.size > 1) {
                     pauseService()
                 }
             } else {
