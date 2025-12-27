@@ -141,7 +141,7 @@ fun TrackingScreen(
             val intent = Intent(context, TrackingService::class.java).apply {
                 this.action = action
             }
-            if (action == TrackingConstants.ACTION_START_OR_RESUME_SERVICE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (action == TrackingConstants.ACTION_START_OR_RESUME_SERVICE) {
                 context.startForegroundService(intent)
             } else {
                 context.startService(intent)
