@@ -101,7 +101,10 @@ fun TrackingScreen(
             val intent = Intent(context, TrackingService::class.java).apply {
                 this.action = action
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Используем startForegroundService только для старта, так как сервис обязан вызвать startForeground.
+            // Для остановки или паузы используем обычный startService, чтобы избежать краша
+            // ForegroundServiceDidNotStartInTimeException, если сервис быстро остановится.
+            if (action == TrackingConstants.ACTION_START_OR_RESUME_SERVICE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
                 context.startService(intent)
