@@ -21,6 +21,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -46,6 +48,7 @@ import arg.adegtiarev.ciclismo.util.formatDuration
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraMoveStartedReason
 import com.google.maps.android.compose.GoogleMap
@@ -54,6 +57,17 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
+@Composable
+fun KeepScreenOn() {
+    val currentView = LocalView.current
+    DisposableEffect(Unit) {
+        currentView.keepScreenOn = true
+        onDispose {
+            currentView.keepScreenOn = false
+        }
+    }
+}
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TrackingScreen(
@@ -61,6 +75,8 @@ fun TrackingScreen(
 ) {
     val state by viewModel.rideState.collectAsState()
     val context = LocalContext.current
+
+    KeepScreenOn()
 
     val showDialog = viewModel.showExitDialog
     val serviceEvent by viewModel.serviceEvents.collectAsState()
@@ -184,9 +200,20 @@ fun CiclismoMap(points: List<TrackingPoint>) {
     // Авто-центрирование и следование за пользователем
     LaunchedEffect(path.size, isFollowing) {
         if (isFollowing && path.isNotEmpty()) {
-            cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngZoom(path.last(), 18f)
+            val lastPoint = path.last()
+            
+            // Если мы следуем за пользователем, обновляем и позицию, и азимут
+            // Используем CameraPosition.Builder для сохранения зума и установки bearing
+            val cameraUpdate = CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(lastPoint)
+                    .zoom(18f) // Держим зум
+                    .bearing(0f) // Пока фиксированный север. Чтобы вращать карту по движению, нужно передавать bearing из Location
+                    .tilt(45f) // Небольшой наклон для красоты
+                    .build()
             )
+            
+            cameraPositionState.animate(cameraUpdate, 1000)
         }
     }
 
@@ -204,10 +231,17 @@ fun CiclismoMap(points: List<TrackingPoint>) {
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = MapProperties(isMyLocationEnabled = true),
-            uiSettings = MapUiSettings(myLocationButtonEnabled = true),
+            uiSettings = MapUiSettings(
+                myLocationButtonEnabled = true,
+                compassEnabled = true // Включаем компас
+            ),
             onMyLocationButtonClick = {
                 isFollowing = true
-                path.isNotEmpty()
+                if (path.isNotEmpty()) {
+                    true
+                } else {
+                    false
+                }
             }
         ) {
             if (path.isNotEmpty()) {
