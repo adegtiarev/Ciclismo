@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -55,6 +56,9 @@ class TrackingService : LifecycleService() {
     private var startLocation: Location? = null
     private var hasLeftStartThreshold = false
 
+    // Флаг, указывающий, что сессия поездки активна (пользователь нажал Start и еще не нажал Stop)
+    private var isServiceActive = false
+
     companion object {
         val isTracking = MutableStateFlow(false)
 
@@ -73,6 +77,8 @@ class TrackingService : LifecycleService() {
         intent?.let {
             when (it.action) {
                 TrackingConstants.ACTION_START_OR_RESUME_SERVICE -> {
+                    // При явном старте активируем сессию
+                    isServiceActive = true
                     startForegroundService()
                 }
 
@@ -139,7 +145,8 @@ class TrackingService : LifecycleService() {
                     }
                 } else {
                     // Мы на паузе (автоматической или ручной)
-                    if (!shouldBePaused) {
+                    // АВТО-СТАРТ срабатывает ТОЛЬКО если сессия активна (isServiceActive == true)
+                    if (!shouldBePaused && isServiceActive) {
                         // Начали движение -> Авто-старт
                         isTracking.value = true
                         startTimer()
@@ -147,7 +154,9 @@ class TrackingService : LifecycleService() {
                 }
 
                 // Логика диалога окончания поездки (работает независимо от паузы)
-                checkStopDialogConditions(location)
+                if (isServiceActive) {
+                    checkStopDialogConditions(location)
+                }
             }
             .launchIn(serviceScope)
     }
@@ -244,9 +253,9 @@ class TrackingService : LifecycleService() {
         isTracking.value = false
         pathPoints.value = emptyList()
         TrackingService.totalDistanceMetres.value = 0.0
-        TrackingService.currentSpeedKmh.value = 0f
+        currentSpeedKmh.value = 0f
         TrackingService.durationInSeconds.value = 0L
-        TrackingService.events.value = null
+        events.value = null
         
         // Сбрасываем локальные переменные
         allPoints.clear()
@@ -258,6 +267,9 @@ class TrackingService : LifecycleService() {
     }
 
     private fun stopService() {
+        // Деактивируем сессию, чтобы авто-старт не сработал
+        isServiceActive = false
+        
         // 1. Сохраняем (копию данных)
         saveRideToDb()
         
@@ -267,5 +279,11 @@ class TrackingService : LifecycleService() {
         // 3. Останавливаем сервис
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isServiceActive = false
+        serviceScope.cancel() // Отменяем все корутины сервиса при его уничтожении
     }
 }
