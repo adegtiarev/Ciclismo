@@ -13,9 +13,6 @@ import javax.inject.Inject
 class RideRepositoryImpl @Inject constructor(
     private val rideDao: RideDao,
 ) : RideRepository {
-    override suspend fun saveRide(ride: Ride): Long {
-        return rideDao.insertRide(ride.toEntity())
-    }
 
     override suspend fun getRideById(id: Long): Ride? {
         // Now using the efficient @Transaction method
@@ -24,10 +21,6 @@ class RideRepositoryImpl @Inject constructor(
 
     override suspend fun deleteRide(ride: Ride) {
         rideDao.deleteRide(ride.toEntity())
-    }
-
-    override suspend fun deleteAllRides() {
-        rideDao.deleteAllRides()
     }
 
     override fun getAllRides(): Flow<List<Ride>> {

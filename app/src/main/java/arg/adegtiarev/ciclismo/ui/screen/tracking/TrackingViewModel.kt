@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import arg.adegtiarev.ciclismo.data.local.mapper.toTrackingPoint
 import arg.adegtiarev.ciclismo.data.service.TrackingService
 import arg.adegtiarev.ciclismo.domain.LocationClient
-import arg.adegtiarev.ciclismo.domain.RideRepository
 import arg.adegtiarev.ciclismo.ui.state.RideState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -21,7 +20,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TrackingViewModel @Inject constructor(
-    private val rideRepository: RideRepository,
     private val locationClient: LocationClient
 ) : ViewModel() {
 

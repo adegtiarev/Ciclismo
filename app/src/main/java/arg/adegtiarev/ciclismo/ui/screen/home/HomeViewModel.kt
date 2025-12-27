@@ -20,7 +20,7 @@ data class HomeState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: RideRepository
+    repository: RideRepository
 ) : ViewModel() {
 
     val state: StateFlow<HomeState> = combine(

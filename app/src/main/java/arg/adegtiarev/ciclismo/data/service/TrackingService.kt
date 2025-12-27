@@ -245,7 +245,7 @@ class TrackingService : LifecycleService() {
                 )
                 // Now we get ID to send to UI
                 val rideId = repository.saveFullRide(finalRide, pointsToSave)
-                
+
                 // Send event to UI
                 events.emit("SAVED_$rideId")
             }
@@ -260,7 +260,7 @@ class TrackingService : LifecycleService() {
         currentSpeedKmh.value = 0f
         TrackingService.durationInSeconds.value = 0L
         events.value = null
-        
+
         // Reset local variables
         allPoints.clear()
         totalDistanceMetres = 0.0
@@ -273,10 +273,10 @@ class TrackingService : LifecycleService() {
     private fun stopService() {
         // Deactivate session so auto-start won't trigger
         isServiceActive = false
-        
+
         // 1. Save (copy of data)
         saveRideToDb()
-        
+
         // 2. Reset UI (immediately, not waiting for DB)
         resetTrackingData()
 

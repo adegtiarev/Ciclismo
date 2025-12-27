@@ -20,12 +20,12 @@ import kotlinx.coroutines.tasks.await
 class DefaultLocationClient(
     private val context: Context,
     private val client: FusedLocationProviderClient
-): LocationClient {
+) : LocationClient {
     @SuppressLint("MissingPermission")
     override fun getLocationUpdates(interval: Long): Flow<Location> {
         return callbackFlow {
             // 1. Check permissions (simplified)
-            if(!context.hasLocationPermission()) {
+            if (!context.hasLocationPermission()) {
                 throw LocationClient.LocationException("Missing location permission")
             }
 
@@ -56,7 +56,7 @@ class DefaultLocationClient(
 
     @SuppressLint("MissingPermission")
     override suspend fun getLastLocation(): Location? {
-        if(!context.hasLocationPermission()) {
+        if (!context.hasLocationPermission()) {
             return null
         }
         return try {

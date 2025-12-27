@@ -27,9 +27,6 @@ interface RideDao {
     @Delete
     suspend fun deleteRide(ride: RideEntity)
 
-    @Query("DELETE FROM rides")
-    suspend fun deleteAllRides()
-
     @Transaction
     suspend fun saveFullRide(ride: RideEntity, points: List<TrackingPointEntity>): Long {
         val rideId = insertRide(ride)

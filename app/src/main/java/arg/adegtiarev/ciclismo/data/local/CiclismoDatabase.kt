@@ -6,7 +6,11 @@ import arg.adegtiarev.ciclismo.data.local.dao.RideDao
 import arg.adegtiarev.ciclismo.data.local.entities.RideEntity
 import arg.adegtiarev.ciclismo.data.local.entities.TrackingPointEntity
 
-@Database(entities = [RideEntity::class, TrackingPointEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [RideEntity::class, TrackingPointEntity::class],
+    version = 1,
+    exportSchema = false
+)
 abstract class CiclismoDatabase : RoomDatabase() {
     abstract fun rideDao(): RideDao
 }

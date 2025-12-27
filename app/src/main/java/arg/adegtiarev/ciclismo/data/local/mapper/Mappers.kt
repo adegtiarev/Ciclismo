@@ -1,6 +1,5 @@
 package arg.adegtiarev.ciclismo.data.local.mapper
 
-import android.location.Location
 import arg.adegtiarev.ciclismo.data.local.entities.RideEntity
 import arg.adegtiarev.ciclismo.data.local.entities.RideWithPoints
 import arg.adegtiarev.ciclismo.data.local.entities.TrackingPointEntity
