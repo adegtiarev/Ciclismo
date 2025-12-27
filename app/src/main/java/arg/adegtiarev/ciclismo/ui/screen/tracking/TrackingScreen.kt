@@ -41,15 +41,13 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import arg.adegtiarev.ciclismo.R
 import arg.adegtiarev.ciclismo.data.service.TrackingService
 import arg.adegtiarev.ciclismo.domain.model.TrackingPoint
 import arg.adegtiarev.ciclismo.ui.state.RideState
 import arg.adegtiarev.ciclismo.util.TrackingConstants
-import arg.adegtiarev.ciclismo.util.TrackingConstants.HIDE_STOP_DIALOG
-import arg.adegtiarev.ciclismo.util.TrackingConstants.SHOW_STOP_DIALOG
 import arg.adegtiarev.ciclismo.util.formatDistance
 import arg.adegtiarev.ciclismo.util.formatDuration
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -69,9 +67,7 @@ fun KeepScreenOn() {
     val currentView = LocalView.current
     DisposableEffect(Unit) {
         currentView.keepScreenOn = true
-        onDispose {
-            currentView.keepScreenOn = false
-        }
+        onDispose { currentView.keepScreenOn = false }
     }
 }
 
@@ -90,22 +86,21 @@ fun TrackingScreen(
     val showDialog = viewModel.showExitDialog
     val serviceEvent by viewModel.serviceEvents.collectAsState()
 
-    // Observe service events
     LaunchedEffect(serviceEvent) {
-        val event = serviceEvent
-        if (event != null) {
+        serviceEvent?.let {
             when {
-                event == SHOW_STOP_DIALOG -> viewModel.setDialogVisibility(true)
-                event == HIDE_STOP_DIALOG -> {
-                    viewModel.setDialogVisibility(false)
-                    viewModel.clearServiceEvent()
+                it.startsWith("SAVED_") -> {
+                    val rideId = it.substringAfter("SAVED_").toLong()
+                    TrackingService.clearEvent()
+                    onNavigateToDetail(rideId)
                 }
-                event.startsWith("SAVED_") -> {
-                    val rideId = event.substringAfter("SAVED_").toLongOrNull()
-                    viewModel.clearServiceEvent()
-                    if (rideId != null) {
-                        onNavigateToDetail(rideId)
-                    }
+                it == TrackingConstants.SHOW_STOP_DIALOG -> {
+                    viewModel.setDialogVisibility(true)
+                    TrackingService.clearEvent()
+                }
+                it == TrackingConstants.HIDE_STOP_DIALOG -> {
+                    viewModel.setDialogVisibility(false)
+                    TrackingService.clearEvent()
                 }
             }
         }
@@ -113,34 +108,24 @@ fun TrackingScreen(
 
     if (showDialog) {
         AlertDialog(
-            onDismissRequest = {
-                viewModel.setDialogVisibility(false)
-                viewModel.clearServiceEvent()
-            },
+            onDismissRequest = { viewModel.setDialogVisibility(false) },
             title = { Text("Finish ride? 🏁") },
             text = { Text("Looks like you returned to the start. Do you want to save the route?") },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.setDialogVisibility(false)
-                    viewModel.clearServiceEvent()
                     viewModel.sendCommand(TrackingConstants.ACTION_STOP_SERVICE)
+                    viewModel.setDialogVisibility(false)
                 }) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    viewModel.setDialogVisibility(false)
-                    viewModel.clearServiceEvent()
-                }) { Text("Cancel") }
+                TextButton(onClick = { viewModel.setDialogVisibility(false) }) { Text("Cancel") }
             }
         )
     }
 
-    // Listen for service commands
     LaunchedEffect(Unit) {
         viewModel.serviceCommand.collect { action ->
-            val intent = Intent(context, TrackingService::class.java).apply {
-                this.action = action
-            }
+            val intent = Intent(context, TrackingService::class.java).apply { this.action = action }
             if (action == TrackingConstants.ACTION_START_OR_RESUME_SERVICE) {
                 context.startForegroundService(intent)
             } else {
@@ -162,9 +147,7 @@ fun TrackingScreen(
         )
     }
 
-    val permissionState = rememberMultiplePermissionsState(
-        permissions = permissionsToRequest
-    )
+    val permissionState = rememberMultiplePermissionsState(permissions = permissionsToRequest)
 
     if (permissionState.allPermissionsGranted) {
         Scaffold(
@@ -173,10 +156,9 @@ fun TrackingScreen(
                 TopAppBar(
                     title = { Text("Ride") },
                     navigationIcon = {
-                        // Back button works only if recording is NOT active
                         IconButton(
                             onClick = { navController.popBackStack() },
-                            enabled = !state.isTracking // Block button if recording
+                            enabled = !state.isTracking
                         ) {
                             Icon(painter = painterResource(id = R.drawable.ic_arrow_back), contentDescription = "Back")
                         }
@@ -189,9 +171,7 @@ fun TrackingScreen(
                     onStartClick = { viewModel.sendCommand(TrackingConstants.ACTION_START_OR_RESUME_SERVICE) },
                     onPauseClick = { viewModel.sendCommand(TrackingConstants.ACTION_PAUSE_SERVICE) },
                     onResumeClick = { viewModel.sendCommand(TrackingConstants.ACTION_START_OR_RESUME_SERVICE) },
-                    onStopClick = {
-                        viewModel.setDialogVisibility(true) // Manual stop also triggers dialog
-                    }
+                    onStopClick = { viewModel.sendCommand(TrackingConstants.ACTION_STOP_SERVICE) }
                 )
             }
         ) { paddingValues ->
@@ -214,9 +194,7 @@ fun TrackingScreen(
             }
         ) { paddingValues ->
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -242,32 +220,23 @@ fun CiclismoMap(points: List<TrackingPoint>) {
         points.map { LatLng(it.latitude, it.longitude) }
     }
 
-    // Auto-center and follow user
     LaunchedEffect(path.size, isFollowing) {
         if (isFollowing && path.isNotEmpty()) {
-            val lastPoint = path.last()
-            
-            // If following, update position and azimuth
-            // Using CameraPosition.Builder to keep zoom and set bearing
             val cameraUpdate = CameraUpdateFactory.newCameraPosition(
                 CameraPosition.Builder()
-                    .target(lastPoint)
-                    .zoom(18f) // Keep zoom
-                    .bearing(0f) // Fixed north for now. To rotate map by movement, pass bearing from Location
-                    .tilt(45f) // Slight tilt for aesthetics
+                    .target(path.last())
+                    .zoom(18f)
+                    .bearing(0f)
+                    .tilt(45f)
                     .build()
             )
-            
             cameraPositionState.animate(cameraUpdate, 1000)
         }
     }
 
-    // Disable following only on user gesture
     LaunchedEffect(cameraPositionState.isMoving) {
-        if (cameraPositionState.isMoving) {
-            if (cameraPositionState.cameraMoveStartedReason == CameraMoveStartedReason.GESTURE) {
-                isFollowing = false
-            }
+        if (cameraPositionState.isMoving && cameraPositionState.cameraMoveStartedReason == CameraMoveStartedReason.GESTURE) {
+            isFollowing = false
         }
     }
 
@@ -278,15 +247,11 @@ fun CiclismoMap(points: List<TrackingPoint>) {
             properties = MapProperties(isMyLocationEnabled = true),
             uiSettings = MapUiSettings(
                 myLocationButtonEnabled = true,
-                compassEnabled = true // Enable compass
+                compassEnabled = true
             ),
             onMyLocationButtonClick = {
                 isFollowing = true
-                if (path.isNotEmpty()) {
-                    true
-                } else {
-                    false
-                }
+                path.isNotEmpty()
             }
         ) {
             if (path.isNotEmpty()) {
@@ -304,17 +269,13 @@ fun TrackingBottomPanel(
     onResumeClick: () -> Unit,
     onStopClick: () -> Unit
 ) {
-    Surface(
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp
-    ) {
+    Surface(tonalElevation = 8.dp, shadowElevation = 8.dp) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(16.dp)
         ) {
-            // Stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
@@ -323,48 +284,32 @@ fun TrackingBottomPanel(
                 StatisticItem("Distance", formatDistance(state.distanceMetres))
                 StatisticItem("Time", formatDuration(state.durationSeconds))
             }
-
             Spacer(modifier = Modifier.width(16.dp))
-
-            // Buttons
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                // If ride not started (or reset to 0)
-                if (state.durationSeconds == 0L && !state.isTracking) {
-                    Button(
-                        onClick = onStartClick,
-                        modifier = Modifier.fillMaxWidth(0.8f)
-                    ) {
-                        Text("START RIDE")
+                when {
+                    state.durationSeconds == 0L && !state.isTracking -> {
+                        Button(onClick = onStartClick, modifier = Modifier.fillMaxWidth(0.8f)) {
+                            Text("START RIDE")
+                        }
                     }
-                } 
-                // If ride is active
-                else if (state.isTracking) {
-                    Button(
-                        onClick = onPauseClick,
-                        modifier = Modifier.fillMaxWidth(0.8f)
-                    ) {
-                        Text("PAUSE")
+                    state.isTracking -> {
+                        Button(onClick = onPauseClick, modifier = Modifier.fillMaxWidth(0.8f)) {
+                            Text("PAUSE")
+                        }
                     }
-                } 
-                // If ride is paused
-                else {
-                    Button(
-                        onClick = onResumeClick,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("RESUME")
-                    }
-                    Spacer(Modifier.width(16.dp))
-                    FilledTonalButton(
-                        onClick = onStopClick,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("STOP", color = Color.Red)
+                    else -> {
+                        Row {
+                            Button(onClick = onResumeClick, modifier = Modifier.weight(1f)) {
+                                Text("RESUME")
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            FilledTonalButton(onClick = onStopClick, modifier = Modifier.weight(1f)) {
+                                Text("STOP", color = Color.Red)
+                            }
+                        }
                     }
                 }
             }
@@ -391,5 +336,6 @@ fun TrackingBottomPanelPreview() {
             currentSpeedKmh = 10f,
             isAutoPaused = false,
             points = emptyList()
-        ), onStartClick = {}, onPauseClick = {}, onResumeClick = {}, onStopClick = {})
+        ), {}, {}, {}, {}
+    )
 }
