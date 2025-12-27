@@ -1,7 +1,10 @@
 package arg.adegtiarev.ciclismo.data.service
 
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.location.Location
+import android.os.Build
+import androidx.core.app.ServiceCompat
 import androidx.lifecycle.LifecycleService
 import arg.adegtiarev.ciclismo.data.local.mapper.toTrackingPoint
 import arg.adegtiarev.ciclismo.data.service.notification.NotificationHelper
@@ -91,9 +94,17 @@ class TrackingService : LifecycleService() {
         isAutoPaused = false // Сбрасываем автопаузу при ручном старте
 
         // 2. Foreground уведомление
-        startForeground(
+        val notification = notificationHelper.createNotification()
+
+        ServiceCompat.startForeground(
+            this,
             TrackingConstants.NOTIFICATION_ID,
-            notificationHelper.createNotification()
+            notification,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            } else {
+                0
+            }
         )
 
         // 3. Запускаем сбор локации, если он еще не запущен
