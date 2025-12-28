@@ -20,6 +20,7 @@ class GeofenceManager @Inject constructor(
 
     private val geofencePendingIntent: PendingIntent by lazy {
         val intent = Intent(context, GeofenceBroadcastReceiver::class.java)
+        // FLAG_MUTABLE is required for Geofencing on Android 12+ (S)
         PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
     }
 
@@ -30,13 +31,14 @@ class GeofenceManager @Inject constructor(
 
         val geofence = Geofence.Builder()
             .setRequestId("START_LOCATION_GEOFENCE")
-            .setCircularRegion(latitude, longitude, 20f) // 20 meter radius
+            .setCircularRegion(latitude, longitude, 50f) // Increased to 50 meter radius
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
             .build()
 
         val geofencingRequest = GeofencingRequest.Builder()
-            // Do NOT set an initial trigger. We only want to be notified on a subsequent entry.
+            // Set initial trigger to 0 to prevent immediate trigger when starting inside the geofence
+            .setInitialTrigger(0)
             .addGeofence(geofence)
             .build()
 

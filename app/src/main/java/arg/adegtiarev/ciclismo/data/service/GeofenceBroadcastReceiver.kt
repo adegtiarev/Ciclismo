@@ -23,7 +23,13 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
             val serviceIntent = Intent(context, TrackingService::class.java).apply {
                 action = TrackingConstants.ACTION_GEOFENCE_ENTER
             }
-            context.startService(serviceIntent)
+            try {
+                context.startService(serviceIntent)
+            } catch (e: Exception) {
+                // If the app is in background and service is not running, this might fail.
+                // However, if the service is not running, the ride state is likely lost anyway.
+                e.printStackTrace()
+            }
         }
     }
 }

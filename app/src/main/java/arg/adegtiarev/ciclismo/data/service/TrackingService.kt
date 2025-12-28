@@ -46,6 +46,7 @@ class TrackingService : LifecycleService() {
     private var timerJob: Job? = null
     private var locationJob: Job? = null
     private var isSessionActive = false
+    private var isManualPause = false
 
     companion object {
         private val _isTracking = MutableStateFlow(false)
@@ -89,6 +90,7 @@ class TrackingService : LifecycleService() {
         }
 
         isSessionActive = true
+        isManualPause = false
         _isTracking.value = true
 
         val notification = notificationHelper.createNotification()
@@ -107,6 +109,7 @@ class TrackingService : LifecycleService() {
 
     private fun pauseService() {
         _isTracking.value = false
+        isManualPause = true
     }
 
     private fun stopRide() {
@@ -147,10 +150,11 @@ class TrackingService : LifecycleService() {
                 }
 
                 if (RideStatsCalculator.shouldAutoPause(location.speed) && _pathPoints.value.size > 1) {
-                    pauseService()
+                    // Auto-pause does NOT set isManualPause
+                    _isTracking.value = false
                 }
             } else {
-                if (!RideStatsCalculator.shouldAutoPause(location.speed) && isSessionActive) {
+                if (!RideStatsCalculator.shouldAutoPause(location.speed) && isSessionActive && !isManualPause) {
                     _isTracking.value = true
                     startTimer()
                 }
@@ -194,6 +198,7 @@ class TrackingService : LifecycleService() {
         _durationInSeconds.value = 0L
         maxSpeedKmh = 0f
         _events.value = null
+        isManualPause = false
     }
 
     override fun onDestroy() {
