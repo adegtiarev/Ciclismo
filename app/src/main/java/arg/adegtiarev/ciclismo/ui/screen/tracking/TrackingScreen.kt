@@ -127,7 +127,11 @@ fun TrackingScreen(
         viewModel.serviceCommand.collect { action ->
             val intent = Intent(context, TrackingService::class.java).apply { this.action = action }
             if (action == TrackingConstants.ACTION_START_OR_RESUME_SERVICE) {
-                context.startForegroundService(intent)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
             } else {
                 context.startService(intent)
             }
@@ -171,7 +175,7 @@ fun TrackingScreen(
                     onStartClick = { viewModel.sendCommand(TrackingConstants.ACTION_START_OR_RESUME_SERVICE) },
                     onPauseClick = { viewModel.sendCommand(TrackingConstants.ACTION_PAUSE_SERVICE) },
                     onResumeClick = { viewModel.sendCommand(TrackingConstants.ACTION_START_OR_RESUME_SERVICE) },
-                    onStopClick = { viewModel.sendCommand(TrackingConstants.ACTION_STOP_SERVICE) }
+                    onStopClick = { viewModel.setDialogVisibility(true) } // Correctly show the dialog
                 )
             }
         ) { paddingValues ->
