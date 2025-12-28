@@ -36,7 +36,7 @@ class GeofenceManager @Inject constructor(
             .build()
 
         val geofencingRequest = GeofencingRequest.Builder()
-            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+            // Do NOT set an initial trigger. We only want to be notified on a subsequent entry.
             .addGeofence(geofence)
             .build()
 
